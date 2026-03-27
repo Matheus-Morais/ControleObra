@@ -5,7 +5,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
   TouchableOpacity,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -14,6 +13,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useProjectStore } from '../stores/projectStore';
 import { useCreateProject, useJoinProject, useProjects } from '../hooks/useProject';
 import { Button, Input, Card, LoadingScreen } from '../components/ui';
+import { showAlert } from '../utils/alert';
 
 export default function ProjectSetupScreen() {
   const router = useRouter();
@@ -29,7 +29,7 @@ export default function ProjectSetupScreen() {
 
   async function handleCreate() {
     if (!projectName.trim()) {
-      Alert.alert('Erro', 'Digite o nome do projeto');
+      showAlert('Erro', 'Digite o nome do projeto');
       return;
     }
     try {
@@ -37,13 +37,13 @@ export default function ProjectSetupScreen() {
       setActiveProject(project);
       router.replace('/(tabs)');
     } catch (error: any) {
-      Alert.alert('Erro', error.message ?? 'Erro ao criar projeto');
+      showAlert('Erro', error.message ?? 'Erro ao criar projeto');
     }
   }
 
   async function handleJoin() {
     if (!inviteCode.trim()) {
-      Alert.alert('Erro', 'Digite o código de convite');
+      showAlert('Erro', 'Digite o código de convite');
       return;
     }
     try {
@@ -51,7 +51,7 @@ export default function ProjectSetupScreen() {
       setActiveProject(project);
       router.replace('/(tabs)');
     } catch (error: any) {
-      Alert.alert('Erro', error.message ?? 'Erro ao entrar no projeto');
+      showAlert('Erro', error.message ?? 'Erro ao entrar no projeto');
     }
   }
 

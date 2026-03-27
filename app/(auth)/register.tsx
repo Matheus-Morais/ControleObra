@@ -5,12 +5,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
 } from 'react-native';
 import { Link } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { signUp } from '../../services/auth';
 import { Button, Input } from '../../components/ui';
+import { showAlert } from '../../utils/alert';
 
 export default function RegisterScreen() {
   const [fullName, setFullName] = useState('');
@@ -21,29 +21,29 @@ export default function RegisterScreen() {
 
   async function handleRegister() {
     if (!fullName.trim() || !email.trim() || !password.trim()) {
-      Alert.alert('Erro', 'Preencha todos os campos');
+      showAlert('Erro', 'Preencha todos os campos');
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Erro', 'As senhas não coincidem');
+      showAlert('Erro', 'As senhas não coincidem');
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Erro', 'A senha deve ter pelo menos 6 caracteres');
+      showAlert('Erro', 'A senha deve ter pelo menos 6 caracteres');
       return;
     }
 
     setLoading(true);
     try {
       await signUp(email.trim(), password, fullName.trim());
-      Alert.alert(
+      showAlert(
         'Conta criada!',
         'Verifique seu e-mail para confirmar o cadastro.'
       );
     } catch (error: any) {
-      Alert.alert('Erro ao cadastrar', error.message ?? 'Tente novamente');
+      showAlert('Erro ao cadastrar', error.message ?? 'Tente novamente');
     } finally {
       setLoading(false);
     }

@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text, Alert, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAuthStore } from '../../stores/authStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { signOut } from '../../services/auth';
 import { Card } from '../../components/ui';
+import { showAlert } from '../../utils/alert';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -14,20 +15,18 @@ export default function SettingsScreen() {
   const reset = useAuthStore((s) => s.reset);
   const resetProject = useProjectStore((s) => s.reset);
 
-  async function handleSignOut() {
-    Alert.alert('Sair', 'Tem certeza que deseja sair?', [
+  async function doSignOut() {
+    try {
+      await signOut();
+      reset();
+      resetProject();
+    } catch {}
+  }
+
+  function handleSignOut() {
+    showAlert('Sair', 'Tem certeza que deseja sair?', [
       { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Sair',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await signOut();
-            reset();
-            resetProject();
-          } catch {}
-        },
-      },
+      { text: 'Sair', style: 'destructive', onPress: doSignOut },
     ]);
   }
 

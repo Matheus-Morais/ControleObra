@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useProjectStore } from '../../stores/projectStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -7,6 +7,7 @@ import { useProjectItems } from '../../hooks/useItems';
 import { useRooms } from '../../hooks/useRooms';
 import { Card, Button, Input, EmptyState, ProgressBar, LoadingScreen } from '../../components/ui';
 import { formatCurrency, formatDate, formatPercentage } from '../../utils/format';
+import { showAlert } from '../../utils/alert';
 import {
   getTransactions,
   createTransaction,
@@ -76,13 +77,13 @@ export default function FinancialScreen() {
       setShowAddForm(false);
       loadData();
     } catch (error: any) {
-      Alert.alert('Erro', error.message);
+      showAlert('Erro', error.message);
     }
   }, [amount, description, notes, activeProject, user]);
 
   const handleDeleteTransaction = useCallback(
     (txnId: string) => {
-      Alert.alert('Remover pagamento', 'Tem certeza?', [
+      showAlert('Remover pagamento', 'Tem certeza?', [
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Remover',
@@ -130,7 +131,7 @@ export default function FinancialScreen() {
       const { uri } = await Print.printToFileAsync({ html });
       await Sharing.shareAsync(uri);
     } catch (error: any) {
-      Alert.alert('Erro', 'Não foi possível gerar o PDF');
+      showAlert('Erro', 'Não foi possível gerar o PDF');
     }
   }, [activeProject, totalBudget, totalSpent, roomBreakdown, transactions]);
 

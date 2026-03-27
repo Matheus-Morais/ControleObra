@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, Alert } from 'react-native';
+import { View, Text, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useProjectStore } from '../../stores/projectStore';
@@ -8,6 +8,7 @@ import { useProjectItems } from '../../hooks/useItems';
 import { Card, ProgressBar, FAB, EmptyState, LoadingScreen } from '../../components/ui';
 import { DEFAULT_ROOMS } from '../../constants/rooms';
 import { formatCurrency, formatPercentage } from '../../utils/format';
+import { showAlert } from '../../utils/alert';
 import type { Room, Item } from '../../types';
 
 function getRoomProgress(roomId: string, items: Item[]) {
@@ -43,7 +44,7 @@ export default function RoomsScreen() {
         });
       }
     } catch (error: any) {
-      Alert.alert('Erro', error.message ?? 'Erro ao adicionar cômodos');
+      showAlert('Erro', error.message ?? 'Erro ao adicionar cômodos');
     } finally {
       setIsAddingRooms(false);
     }
@@ -60,7 +61,7 @@ export default function RoomsScreen() {
   const handleDeleteRoom = useCallback(
     (room: Room) => {
       if (!activeProject) return;
-      Alert.alert(
+      showAlert(
         'Excluir cômodo',
         `Tem certeza que deseja excluir "${room.name}"? Todos os itens deste cômodo serão removidos.`,
         [

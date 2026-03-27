@@ -5,12 +5,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
 } from 'react-native';
 import { Link } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { signIn } from '../../services/auth';
 import { Button, Input } from '../../components/ui';
+import { showAlert } from '../../utils/alert';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -20,7 +20,7 @@ export default function LoginScreen() {
 
   async function handleLogin() {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Erro', 'Preencha todos os campos');
+      showAlert('Erro', 'Preencha todos os campos');
       return;
     }
 
@@ -28,7 +28,7 @@ export default function LoginScreen() {
     try {
       await signIn(email.trim(), password);
     } catch (error: any) {
-      Alert.alert('Erro ao entrar', error.message ?? 'Tente novamente');
+      showAlert('Erro ao entrar', error.message ?? 'Tente novamente');
     } finally {
       setLoading(false);
     }

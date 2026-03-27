@@ -31,14 +31,12 @@ export async function createProject(name: string, userId: string): Promise<Proje
 }
 
 export async function joinProject(inviteCode: string, userId: string): Promise<Project> {
-  const { data: project, error: findError } = await supabase
-    .from('projects')
-    .select('*')
-    .eq('invite_code', inviteCode.toUpperCase())
-    .single();
+  const { data, error: findError } = await supabase
+    .rpc('find_project_by_invite_code', { code: inviteCode });
 
-  if (findError) throw new Error('Código de convite inválido');
-  if (!project) throw new Error('Código de convite inválido');
+  const project = Array.isArray(data) ? data[0] : data;
+
+  if (findError || !project) throw new Error('Código de convite inválido');
 
   const { error: joinError } = await supabase.from('project_members').insert({
     project_id: project.id,

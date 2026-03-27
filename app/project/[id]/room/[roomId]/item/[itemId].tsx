@@ -3,7 +3,6 @@ import {
   View,
   Text,
   ScrollView,
-  Alert,
   TouchableOpacity,
   Image,
   TextInput,
@@ -12,6 +11,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { showAlert } from '../../../../../../utils/alert';
 import { useItem, useUpdateItem, useUpdateItemStatus } from '../../../../../../hooks/useItems';
 import {
   useItemOptions,
@@ -102,7 +102,7 @@ export default function ItemDetailScreen() {
         await updateStatus.mutateAsync({ itemId, status });
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Erro ao atualizar status';
-        Alert.alert('Erro', message);
+        showAlert('Erro', message);
       }
     },
     [itemId, updateStatus]
@@ -126,7 +126,7 @@ export default function ItemDetailScreen() {
       resetOptionForm();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Erro ao adicionar opção';
-      Alert.alert('Erro', message);
+      showAlert('Erro', message);
     }
   }, [
     optionName,
@@ -159,7 +159,7 @@ export default function ItemDetailScreen() {
         await chooseOption.mutateAsync({ itemId, optionId });
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Erro ao escolher opção';
-        Alert.alert('Erro', message);
+        showAlert('Erro', message);
       }
     },
     [itemId, chooseOption]
@@ -167,7 +167,7 @@ export default function ItemDetailScreen() {
 
   const handleDeleteOption = useCallback(
     (optionId: string) => {
-      Alert.alert('Remover opção', 'Tem certeza?', [
+      showAlert('Remover opção', 'Tem certeza?', [
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Remover',
@@ -191,7 +191,7 @@ export default function ItemDetailScreen() {
       } catch (error: unknown) {
         const message =
           error instanceof Error ? error.message : 'Erro ao enviar foto';
-        Alert.alert('Erro', message ?? 'Erro ao enviar foto');
+        showAlert('Erro', message ?? 'Erro ao enviar foto');
       } finally {
         setUploadingPhoto(false);
       }
@@ -209,7 +209,7 @@ export default function ItemDetailScreen() {
       setEditingBudget(false);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Erro ao salvar orçamento';
-      Alert.alert('Erro', message);
+      showAlert('Erro', message);
     }
   }, [itemId, budgetValue, updateItem]);
 
@@ -223,7 +223,7 @@ export default function ItemDetailScreen() {
       setEditingNotes(false);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Erro ao salvar notas';
-      Alert.alert('Erro', message);
+      showAlert('Erro', message);
     }
   }, [itemId, notesValue, updateItem]);
 
@@ -237,7 +237,7 @@ export default function ItemDetailScreen() {
       setComments(updated);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Erro ao enviar comentário';
-      Alert.alert('Erro', message);
+      showAlert('Erro', message);
     } finally {
       setLoadingComment(false);
     }

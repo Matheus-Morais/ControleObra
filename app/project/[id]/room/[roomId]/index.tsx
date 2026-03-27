@@ -3,7 +3,6 @@ import {
   View,
   Text,
   ScrollView,
-  Alert,
   TouchableOpacity,
   TextInput,
 } from 'react-native';
@@ -16,6 +15,7 @@ import { useAuthStore } from '../../../../../stores/authStore';
 import { Card, StatusChip, FAB, EmptyState, LoadingScreen, Button, Input } from '../../../../../components/ui';
 import { DEFAULT_ROOMS } from '../../../../../constants/rooms';
 import { formatCurrency } from '../../../../../utils/format';
+import { showAlert } from '../../../../../utils/alert';
 import type { ItemStatus } from '../../../../../types';
 
 const STATUS_FILTERS: { key: ItemStatus | 'all'; label: string }[] = [
@@ -70,13 +70,13 @@ export default function RoomItemsScreen() {
       setNewItemCategory('');
       setShowAddForm(false);
     } catch (error: any) {
-      Alert.alert('Erro', error.message ?? 'Erro ao adicionar item');
+      showAlert('Erro', error.message ?? 'Erro ao adicionar item');
     }
   }, [newItemName, newItemCategory, projectId, roomId, user]);
 
   const handleDeleteItem = useCallback(
     (itemId: string) => {
-      Alert.alert('Remover item', 'Tem certeza?', [
+      showAlert('Remover item', 'Tem certeza?', [
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Remover',

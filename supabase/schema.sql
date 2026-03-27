@@ -141,6 +141,12 @@ RETURNS BOOLEAN AS $$
   );
 $$ LANGUAGE sql SECURITY DEFINER STABLE;
 
+-- Funcao para buscar projeto por invite code (bypassa RLS para quem ainda nao e membro)
+CREATE OR REPLACE FUNCTION find_project_by_invite_code(code TEXT)
+RETURNS SETOF projects AS $$
+  SELECT * FROM projects WHERE invite_code = UPPER(code) LIMIT 1;
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
 -- Funcao para criar perfil automaticamente no signup
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$

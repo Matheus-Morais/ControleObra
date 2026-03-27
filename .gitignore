@@ -19,3 +19,5 @@ web-build/
 # @generated expo-cli sync
 ios/
 android/
+
+.vercel
