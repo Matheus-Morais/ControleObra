@@ -206,6 +206,14 @@ ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view own profile"
   ON profiles FOR SELECT USING (auth.uid() = id);
 
+CREATE POLICY "Members can view project member profiles"
+  ON profiles FOR SELECT
+  USING (EXISTS (
+    SELECT 1 FROM project_members pm1
+    JOIN project_members pm2 ON pm1.project_id = pm2.project_id
+    WHERE pm1.user_id = auth.uid() AND pm2.user_id = profiles.id
+  ));
+
 CREATE POLICY "Users can update own profile"
   ON profiles FOR UPDATE USING (auth.uid() = id);
 

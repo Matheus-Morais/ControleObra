@@ -7,7 +7,7 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAuthStore } from '../stores/authStore';
 import { useProjectStore } from '../stores/projectStore';
@@ -67,14 +67,24 @@ export default function ProjectSetupScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       className="flex-1 bg-cream"
     >
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          title: 'Seus Projetos',
+          headerStyle: { backgroundColor: '#FAFAF8' },
+          headerTintColor: '#33291E',
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')} style={{ marginRight: 8 }}>
+              <Feather name="arrow-left" size={24} color="#33291E" />
+            </TouchableOpacity>
+          ),
+        }}
+      />
       <ScrollView
         contentContainerStyle={{ flexGrow: 1 }}
         keyboardShouldPersistTaps="handled"
       >
-        <View className="flex-1 px-8 pt-16 pb-8">
-          <Text className="text-2xl font-bold text-sand-900 mb-2">
-            Seus Projetos
-          </Text>
+        <View className="flex-1 px-8 pt-6 pb-8">
           <Text className="text-sand-500 mb-6">
             Selecione um projeto ou crie um novo
           </Text>

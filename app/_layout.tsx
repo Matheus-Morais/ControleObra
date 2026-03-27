@@ -46,22 +46,38 @@ export default function RootLayout() {
   const { setSession, setProfile, setLoading } = useAuthStore();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        supabase.auth.signOut();
+        setSession(null);
+        setProfile(null);
+        setLoading(false);
+        return;
+      }
       setSession(session);
       if (session?.user) {
-        getProfile(session.user.id).then(setProfile).catch(() => {});
+        getProfile(session.user.id).then(setProfile).catch((err) => {
+          console.warn('Erro ao carregar perfil:', err?.message);
+        });
       }
       setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
+        if (event === 'TOKEN_REFRESHED' && !session) {
+          setSession(null);
+          setProfile(null);
+          return;
+        }
         setSession(session);
         if (session?.user) {
           try {
             const profile = await getProfile(session.user.id);
             setProfile(profile);
-          } catch {}
+          } catch (err: any) {
+            console.warn('Erro ao atualizar perfil:', err?.message);
+          }
         } else {
           setProfile(null);
         }

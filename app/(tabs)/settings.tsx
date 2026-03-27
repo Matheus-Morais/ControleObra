@@ -36,7 +36,7 @@ export default function SettingsScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-cream px-4 pt-4">
+    <ScrollView className="flex-1 bg-cream px-4 pt-4" contentContainerStyle={{ paddingBottom: 40 }}>
       <Text className="text-xl font-bold text-sand-900 mb-6">Ajustes</Text>
 
       <Card className="mb-4">

@@ -15,6 +15,7 @@ import {
   getProjectTotalSpent,
 } from '../../services/transactions';
 import type { Transaction } from '../../types';
+import { Platform } from 'react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 
@@ -33,7 +34,10 @@ export default function FinancialScreen() {
   const [notes, setNotes] = useState('');
 
   const loadData = useCallback(async () => {
-    if (!activeProject) return;
+    if (!activeProject) {
+      setLoading(false);
+      return;
+    }
     try {
       const [txns, spent] = await Promise.all([
         getTransactions(activeProject.id),
@@ -41,7 +45,9 @@ export default function FinancialScreen() {
       ]);
       setTransactions(txns);
       setTotalSpent(spent);
-    } catch {} finally {
+    } catch (error: any) {
+      showAlert('Erro', error?.message ?? 'Não foi possível carregar os dados financeiros');
+    } finally {
       setLoading(false);
     }
   }, [activeProject]);
@@ -89,8 +95,12 @@ export default function FinancialScreen() {
           text: 'Remover',
           style: 'destructive',
           onPress: async () => {
-            await deleteTransaction(txnId);
-            loadData();
+            try {
+              await deleteTransaction(txnId);
+              loadData();
+            } catch (error: any) {
+              showAlert('Erro', error?.message ?? 'Não foi possível remover o pagamento');
+            }
           },
         },
       ]);
@@ -100,8 +110,9 @@ export default function FinancialScreen() {
 
   const handleExportPDF = useCallback(async () => {
     if (!activeProject) return;
-    const html = `
-      <html><head><style>
+
+    if (Platform.OS === 'web') {
+      const html = `<html><head><style>
         body { font-family: sans-serif; padding: 20px; }
         h1 { color: #C1694F; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
@@ -124,8 +135,36 @@ export default function FinancialScreen() {
           <tr><th>Data</th><th>Descrição</th><th>Valor</th></tr>
           ${transactions.map((t) => `<tr><td>${formatDate(t.paid_at)}</td><td>${t.description ?? '-'}</td><td>R$ ${Number(t.amount).toFixed(2)}</td></tr>`).join('')}
         </table>
-      </body></html>
-    `;
+      </body></html>`;
+      const w = window.open('', '_blank');
+      if (w) { w.document.write(html); w.document.close(); w.print(); }
+      return;
+    }
+
+    const html = `<html><head><style>
+      body { font-family: sans-serif; padding: 20px; }
+      h1 { color: #C1694F; }
+      table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+      th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+      th { background-color: #F5F0E8; }
+      .total { font-weight: bold; font-size: 18px; }
+    </style></head><body>
+      <h1>ControleObra - ${activeProject.name}</h1>
+      <p>Relatório gerado em ${formatDate(new Date().toISOString())}</p>
+      <h2>Resumo</h2>
+      <p class="total">Orçamento: R$ ${totalBudget.toFixed(2)}</p>
+      <p class="total">Gasto: R$ ${totalSpent.toFixed(2)}</p>
+      <h2>Por Cômodo</h2>
+      <table>
+        <tr><th>Cômodo</th><th>Orçamento</th><th>Gasto</th></tr>
+        ${roomBreakdown.map((r) => `<tr><td>${r.name}</td><td>R$ ${r.budget.toFixed(2)}</td><td>R$ ${r.spent.toFixed(2)}</td></tr>`).join('')}
+      </table>
+      <h2>Pagamentos</h2>
+      <table>
+        <tr><th>Data</th><th>Descrição</th><th>Valor</th></tr>
+        ${transactions.map((t) => `<tr><td>${formatDate(t.paid_at)}</td><td>${t.description ?? '-'}</td><td>R$ ${Number(t.amount).toFixed(2)}</td></tr>`).join('')}
+      </table>
+    </body></html>`;
 
     try {
       const { uri } = await Print.printToFileAsync({ html });

@@ -135,7 +135,7 @@ export default function RoomsScreen() {
                 {progress.total > 0 && (
                   <ProgressBar
                     progress={pct}
-                    color={`bg-[${room.color}]`}
+                    barColor={room.color}
                     className="mt-2"
                     height={4}
                     showLabel={false}

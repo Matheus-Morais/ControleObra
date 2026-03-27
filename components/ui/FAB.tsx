@@ -14,6 +14,7 @@ export function FAB({ onPress, icon = 'plus', className = '' }: FABProps) {
       onPress={onPress}
       activeOpacity={0.8}
       className={`absolute bottom-6 right-6 w-14 h-14 rounded-full bg-terracotta-500 items-center justify-center shadow-lg ${className}`}
+      style={{ zIndex: 10, elevation: 5 }}
     >
       <Feather name={icon} size={24} color="#fff" />
     </TouchableOpacity>

@@ -4,6 +4,7 @@ import { View, Text } from 'react-native';
 interface ProgressBarProps {
   progress: number;
   color?: string;
+  barColor?: string;
   showLabel?: boolean;
   height?: number;
   className?: string;
@@ -12,6 +13,7 @@ interface ProgressBarProps {
 export function ProgressBar({
   progress,
   color = 'bg-terracotta-500',
+  barColor,
   showLabel = true,
   height = 6,
   className = '',
@@ -25,8 +27,11 @@ export function ProgressBar({
       )}
       <View className="bg-sand-100 rounded-full overflow-hidden" style={{ height }}>
         <View
-          className={`${color} rounded-full h-full`}
-          style={{ width: `${clampedProgress}%` }}
+          className={`${barColor ? '' : color} rounded-full h-full`}
+          style={{
+            width: `${clampedProgress}%`,
+            ...(barColor ? { backgroundColor: barColor } : {}),
+          }}
         />
       </View>
     </View>

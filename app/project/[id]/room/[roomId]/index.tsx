@@ -105,97 +105,109 @@ export default function RoomItemsScreen() {
         }}
       />
 
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100 }}>
-        {/* Status filters */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="px-4 py-3">
-          {STATUS_FILTERS.map((f) => (
-            <TouchableOpacity
-              key={f.key}
-              onPress={() => setStatusFilter(f.key)}
-              className={`px-4 py-2 rounded-full mr-2 ${
-                statusFilter === f.key ? 'bg-terracotta-500' : 'bg-white border border-sand-200'
-              }`}
+      {/* Status filters - always visible */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 }}
+      >
+        {STATUS_FILTERS.map((f) => (
+          <TouchableOpacity
+            key={f.key}
+            onPress={() => setStatusFilter(f.key)}
+            style={{
+              paddingHorizontal: 16,
+              paddingVertical: 8,
+              borderRadius: 20,
+              marginRight: 8,
+              backgroundColor: statusFilter === f.key ? '#B85C38' : '#FFFFFF',
+              borderWidth: statusFilter === f.key ? 0 : 1,
+              borderColor: '#EDE5D6',
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 14,
+                fontWeight: '500',
+                color: statusFilter === f.key ? '#FFFFFF' : '#8B7355',
+              }}
             >
-              <Text
-                className={`text-sm font-medium ${
-                  statusFilter === f.key ? 'text-white' : 'text-sand-600'
-                }`}
-              >
-                {f.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+              {f.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
 
-        {/* Add form */}
-        {showAddForm && (
-          <View className="px-4 mb-4">
-            <Card>
-              <Text className="text-sand-900 font-semibold mb-3">Novo Item</Text>
-              <Input
-                label="Nome do item"
-                placeholder="Ex: Chuveiro, Piso, Geladeira"
-                value={newItemName}
-                onChangeText={setNewItemName}
-              />
-              {categories.length > 0 && (
-                <View className="mb-3">
-                  <Text className="text-sand-800 font-medium text-sm mb-2">Categoria</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    {categories.map((cat) => (
-                      <TouchableOpacity
-                        key={cat}
-                        onPress={() => setNewItemCategory(cat)}
-                        className={`px-3 py-1.5 rounded-full mr-2 ${
-                          newItemCategory === cat
-                            ? 'bg-moss-500'
-                            : 'bg-sand-100'
-                        }`}
-                      >
-                        <Text
-                          className={`text-xs font-medium ${
-                            newItemCategory === cat ? 'text-white' : 'text-sand-700'
+      {isLoading ? (
+        <LoadingScreen />
+      ) : filteredItems.length === 0 && !showAddForm ? (
+        <EmptyState
+          icon="package"
+          title="Nenhum item"
+          description="Adicione itens para este cômodo"
+          actionLabel="Adicionar Item"
+          onAction={() => setShowAddForm(true)}
+        />
+      ) : (
+        <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100 }}>
+          {/* Add form */}
+          {showAddForm && (
+            <View className="px-4 mb-4">
+              <Card>
+                <Text className="text-sand-900 font-semibold mb-3">Novo Item</Text>
+                <Input
+                  label="Nome do item"
+                  placeholder="Ex: Chuveiro, Piso, Geladeira"
+                  value={newItemName}
+                  onChangeText={setNewItemName}
+                />
+                {categories.length > 0 && (
+                  <View className="mb-3">
+                    <Text className="text-sand-800 font-medium text-sm mb-2">Categoria</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                      {categories.map((cat) => (
+                        <TouchableOpacity
+                          key={cat}
+                          onPress={() => setNewItemCategory(cat)}
+                          className={`px-3 py-1.5 rounded-full mr-2 ${
+                            newItemCategory === cat
+                              ? 'bg-moss-500'
+                              : 'bg-sand-100'
                           }`}
                         >
-                          {cat}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
+                          <Text
+                            className={`text-xs font-medium ${
+                              newItemCategory === cat ? 'text-white' : 'text-sand-700'
+                            }`}
+                          >
+                            {cat}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+                <View className="flex-row gap-3">
+                  <Button
+                    title="Cancelar"
+                    onPress={() => setShowAddForm(false)}
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1"
+                  />
+                  <Button
+                    title="Adicionar"
+                    onPress={handleAddItem}
+                    size="sm"
+                    loading={createItem.isPending}
+                    className="flex-1"
+                  />
                 </View>
-              )}
-              <View className="flex-row gap-3">
-                <Button
-                  title="Cancelar"
-                  onPress={() => setShowAddForm(false)}
-                  variant="ghost"
-                  size="sm"
-                  className="flex-1"
-                />
-                <Button
-                  title="Adicionar"
-                  onPress={handleAddItem}
-                  size="sm"
-                  loading={createItem.isPending}
-                  className="flex-1"
-                />
-              </View>
-            </Card>
-          </View>
-        )}
+              </Card>
+            </View>
+          )}
 
-        {/* Items list */}
-        {isLoading ? (
-          <LoadingScreen />
-        ) : filteredItems.length === 0 ? (
-          <EmptyState
-            icon="package"
-            title="Nenhum item"
-            description="Adicione itens para este cômodo"
-            actionLabel="Adicionar Item"
-            onAction={() => setShowAddForm(true)}
-          />
-        ) : (
+          {/* Items list */}
           <View className="px-4">
             {filteredItems.map((item) => (
               <Card
@@ -232,8 +244,8 @@ export default function RoomItemsScreen() {
               </Card>
             ))}
           </View>
-        )}
-      </ScrollView>
+        </ScrollView>
+      )}
 
       {!showAddForm && (
         <FAB onPress={() => setShowAddForm(true)} />

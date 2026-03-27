@@ -9,7 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useLocalSearchParams, Stack } from 'expo-router';
+import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { showAlert } from '../../../../../../utils/alert';
 import { useItem, useUpdateItem, useUpdateItemStatus } from '../../../../../../hooks/useItems';
@@ -54,8 +54,9 @@ export default function ItemDetailScreen() {
     itemId: string;
   }>();
   const itemId = Array.isArray(itemIdParam) ? itemIdParam[0] : itemIdParam;
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  const { data: item, isLoading } = useItem(itemId);
+  const { data: item, isLoading, isError } = useItem(itemId);
   const { data: options, refetch: refetchOptions } = useItemOptions(itemId);
   const updateItem = useUpdateItem();
   const updateStatus = useUpdateItemStatus();
@@ -84,7 +85,9 @@ export default function ItemDetailScreen() {
 
   useEffect(() => {
     if (itemId) {
-      getComments(itemId).then(setComments).catch(() => {});
+      getComments(itemId).then(setComments).catch((err) => {
+        console.warn('Erro ao carregar comentários:', err?.message);
+      });
     }
   }, [itemId]);
 
@@ -256,7 +259,34 @@ export default function ItemDetailScreen() {
     [item]
   );
 
-  if (isLoading || !item) return <LoadingScreen />;
+  if (isLoading) return <LoadingScreen />;
+
+  if (isError || !item) {
+    return (
+      <View className="flex-1 bg-cream">
+        <Stack.Screen
+          options={{
+            headerShown: true,
+            title: 'Erro',
+            headerStyle: { backgroundColor: '#FAFAF8' },
+            headerTintColor: '#33291E',
+            headerLeft: () => (
+              <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 8 }}>
+                <Feather name="arrow-left" size={24} color="#33291E" />
+              </TouchableOpacity>
+            ),
+          }}
+        />
+        <EmptyState
+          icon="alert-circle"
+          title="Item não encontrado"
+          description="Não foi possível carregar este item. Verifique sua conexão e tente novamente."
+          actionLabel="Voltar"
+          onAction={() => router.back()}
+        />
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -269,6 +299,11 @@ export default function ItemDetailScreen() {
           title: item.name,
           headerStyle: { backgroundColor: '#FAFAF8' },
           headerTintColor: '#33291E',
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 8 }}>
+              <Feather name="arrow-left" size={24} color="#33291E" />
+            </TouchableOpacity>
+          ),
         }}
       />
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 120 }}>
