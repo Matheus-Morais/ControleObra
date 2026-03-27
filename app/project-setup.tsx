@@ -74,7 +74,7 @@ export default function ProjectSetupScreen() {
           headerStyle: { backgroundColor: '#FAFAF8' },
           headerTintColor: '#33291E',
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')} style={{ marginRight: 8 }}>
+            <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')} style={{ marginLeft: 10, marginRight: 8, padding: 10 }}>
               <Feather name="arrow-left" size={24} color="#33291E" />
             </TouchableOpacity>
           ),

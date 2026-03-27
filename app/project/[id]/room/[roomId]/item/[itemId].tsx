@@ -271,7 +271,7 @@ export default function ItemDetailScreen() {
             headerStyle: { backgroundColor: '#FAFAF8' },
             headerTintColor: '#33291E',
             headerLeft: () => (
-              <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 8 }}>
+              <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 8, marginLeft: 10, padding: 10 }}>
                 <Feather name="arrow-left" size={24} color="#33291E" />
               </TouchableOpacity>
             ),
@@ -300,7 +300,7 @@ export default function ItemDetailScreen() {
           headerStyle: { backgroundColor: '#FAFAF8' },
           headerTintColor: '#33291E',
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 8 }}>
+            <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 8, marginLeft: 10, padding: 10 }}>
               <Feather name="arrow-left" size={24} color="#33291E" />
             </TouchableOpacity>
           ),

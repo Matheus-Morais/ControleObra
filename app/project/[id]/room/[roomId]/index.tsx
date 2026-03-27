@@ -98,7 +98,7 @@ export default function RoomItemsScreen() {
           headerStyle: { backgroundColor: '#FAFAF8' },
           headerTintColor: '#33291E',
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 8 }}>
+            <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 8, marginLeft: 10, padding: 10 }}>
               <Feather name="arrow-left" size={24} color="#33291E" />
             </TouchableOpacity>
           ),
@@ -109,6 +109,7 @@ export default function RoomItemsScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={{ flexGrow: 0 }}
         contentContainerStyle={{ alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 }}
       >
         {STATUS_FILTERS.map((f) => (
@@ -140,16 +141,19 @@ export default function RoomItemsScreen() {
 
       {isLoading ? (
         <LoadingScreen />
-      ) : filteredItems.length === 0 && !showAddForm ? (
-        <EmptyState
-          icon="package"
-          title="Nenhum item"
-          description="Adicione itens para este cômodo"
-          actionLabel="Adicionar Item"
-          onAction={() => setShowAddForm(true)}
-        />
       ) : (
-        <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100 }}>
+        <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100, flexGrow: 1 }}>
+          {filteredItems.length === 0 && !showAddForm ? (
+            <View className="flex-1 items-center justify-center p-8">
+              <View className="bg-sand-100 rounded-full p-6 mb-4">
+                <Feather name="package" size={40} color="#A89270" />
+              </View>
+              <Text className="text-sand-800 text-lg font-semibold text-center mb-2">Nenhum item</Text>
+              <Text className="text-sand-500 text-sm text-center mb-6">Adicione itens para este cômodo</Text>
+              <Button title="Adicionar Item" onPress={() => setShowAddForm(true)} size="sm" />
+            </View>
+          ) : null}
+
           {/* Add form */}
           {showAddForm && (
             <View className="px-4 mb-4">
@@ -247,7 +251,7 @@ export default function RoomItemsScreen() {
         </ScrollView>
       )}
 
-      {!showAddForm && (
+      {!showAddForm && filteredItems.length > 0 && (
         <FAB onPress={() => setShowAddForm(true)} />
       )}
     </View>
