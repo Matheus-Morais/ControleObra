@@ -1,15 +1,26 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Keyboard } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useProjectStore } from '../../stores/projectStore';
-import { useRooms, useCreateRoom, useDeleteRoom } from '../../hooks/useRooms';
+import { useRooms, useCreateRoom, useUpdateRoom, useDeleteRoom } from '../../hooks/useRooms';
 import { useProjectItems } from '../../hooks/useItems';
-import { Card, ProgressBar, FAB, EmptyState, LoadingScreen } from '../../components/ui';
+import { Card, ProgressBar, FAB, EmptyState, LoadingScreen, Button } from '../../components/ui';
 import { DEFAULT_ROOMS } from '../../constants/rooms';
 import { formatCurrency, formatPercentage } from '../../utils/format';
 import { showAlert } from '../../utils/alert';
 import type { Room, Item } from '../../types';
+
+const ROOM_COLORS = [
+  '#C1694F', '#A85740', '#5B7553', '#6F9366', '#3B82F6',
+  '#6366F1', '#8B5CF6', '#6B7280', '#F59E0B', '#0EA5E9',
+  '#A89270', '#EC4899', '#14B8A6', '#EF4444',
+];
+
+const ROOM_ICONS = [
+  'home', 'grid', 'box', 'star', 'heart',
+  'layers', 'square', 'triangle', 'circle', 'hexagon',
+];
 
 function getRoomProgress(roomId: string, items: Item[]) {
   const roomItems = items.filter((i) => i.room_id === roomId);
@@ -23,11 +34,20 @@ function getRoomProgress(roomId: string, items: Item[]) {
 export default function RoomsScreen() {
   const router = useRouter();
   const activeProject = useProjectStore((s) => s.activeProject);
-  const { data: rooms, isLoading: roomsLoading } = useRooms(activeProject?.id);
+  const { data: rooms, isLoading: roomsLoading, isError: roomsError, refetch: refetchRooms } = useRooms(activeProject?.id);
   const { data: items = [] } = useProjectItems(activeProject?.id);
   const createRoom = useCreateRoom();
+  const updateRoom = useUpdateRoom();
   const deleteRoom = useDeleteRoom();
   const [isAddingRooms, setIsAddingRooms] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newRoomName, setNewRoomName] = useState('');
+  const [editingRoom, setEditingRoom] = useState<Room | null>(null);
+  const [editName, setEditName] = useState('');
+  const [actionRoom, setActionRoom] = useState<Room | null>(null);
+  const inputRef = useRef<TextInput>(null);
+
+  const hasRooms = !!rooms && rooms.length > 0;
 
   const handleAddDefaultRooms = useCallback(async () => {
     if (!activeProject || isAddingRooms) return;
@@ -50,6 +70,29 @@ export default function RoomsScreen() {
     }
   }, [activeProject, createRoom, isAddingRooms]);
 
+  const handleAddCustomRoom = useCallback(async () => {
+    const name = newRoomName.trim();
+    if (!name || !activeProject) return;
+
+    const colorIndex = (rooms?.length ?? 0) % ROOM_COLORS.length;
+    const iconIndex = (rooms?.length ?? 0) % ROOM_ICONS.length;
+
+    try {
+      await createRoom.mutateAsync({
+        project_id: activeProject.id,
+        name,
+        icon: ROOM_ICONS[iconIndex],
+        color: ROOM_COLORS[colorIndex],
+        sort_order: rooms?.length ?? 0,
+      });
+      setNewRoomName('');
+      setShowAddForm(false);
+      Keyboard.dismiss();
+    } catch (error: any) {
+      showAlert('Erro', error?.message ?? 'Erro ao criar cômodo');
+    }
+  }, [newRoomName, activeProject, rooms, createRoom]);
+
   const handleRoomPress = useCallback(
     (room: Room) => {
       if (!activeProject) return;
@@ -58,30 +101,76 @@ export default function RoomsScreen() {
     [activeProject, router]
   );
 
-  const handleDeleteRoom = useCallback(
+  const handleRoomLongPress = useCallback(
     (room: Room) => {
       if (!activeProject) return;
-      showAlert(
-        'Excluir cômodo',
-        `Tem certeza que deseja excluir "${room.name}"? Todos os itens deste cômodo serão removidos.`,
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          {
-            text: 'Excluir',
-            style: 'destructive',
-            onPress: () => deleteRoom.mutate({ roomId: room.id, projectId: activeProject.id }),
-          },
-        ]
-      );
+      setActionRoom(room);
     },
-    [activeProject, deleteRoom]
+    [activeProject]
   );
+
+  const handleActionRename = useCallback(() => {
+    if (!actionRoom) return;
+    setEditingRoom(actionRoom);
+    setEditName(actionRoom.name);
+    setActionRoom(null);
+  }, [actionRoom]);
+
+  const handleActionDelete = useCallback(() => {
+    if (!actionRoom || !activeProject) return;
+    const room = actionRoom;
+    setActionRoom(null);
+    showAlert(
+      'Excluir cômodo',
+      `Tem certeza que deseja excluir "${room.name}"? Todos os itens deste cômodo serão removidos.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: () => deleteRoom.mutate({ roomId: room.id, projectId: activeProject.id }),
+        },
+      ]
+    );
+  }, [actionRoom, activeProject, deleteRoom]);
+
+  const handleSaveRename = useCallback(async () => {
+    const name = editName.trim();
+    if (!name || !editingRoom || !activeProject) return;
+    if (name === editingRoom.name) {
+      setEditingRoom(null);
+      return;
+    }
+
+    try {
+      await updateRoom.mutateAsync({
+        roomId: editingRoom.id,
+        updates: { name },
+        projectId: activeProject.id,
+      });
+      setEditingRoom(null);
+      setEditName('');
+    } catch (error: any) {
+      showAlert('Erro', error?.message ?? 'Erro ao renomear cômodo');
+    }
+  }, [editName, editingRoom, activeProject, updateRoom]);
 
   if (!activeProject) {
     return <EmptyState icon="home" title="Nenhum projeto selecionado" description="Selecione ou crie um projeto para começar" />;
   }
 
   if (roomsLoading) return <LoadingScreen />;
+
+  if (roomsError) {
+    return (
+      <View className="flex-1 items-center justify-center bg-cream p-8">
+        <Feather name="alert-circle" size={40} color="#EF4444" />
+        <Text className="text-sand-800 text-lg font-semibold text-center mt-4 mb-2">Erro ao carregar cômodos</Text>
+        <Text className="text-sand-500 text-sm text-center mb-6">Verifique sua conexão e tente novamente</Text>
+        <Button title="Tentar novamente" onPress={() => refetchRooms()} size="sm" />
+      </View>
+    );
+  }
 
   if (!rooms || rooms.length === 0) {
     return (
@@ -103,6 +192,179 @@ export default function RoomsScreen() {
         <Text className="text-xl font-bold text-sand-900 mb-4">
           Cômodos
         </Text>
+
+        {/* Action menu for long press */}
+        {actionRoom && (
+          <View
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: 12,
+              padding: 16,
+              marginBottom: 16,
+              borderWidth: 1,
+              borderColor: '#EDE5D6',
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <View
+                style={{
+                  width: 36, height: 36, borderRadius: 10,
+                  alignItems: 'center', justifyContent: 'center',
+                  backgroundColor: actionRoom.color + '20',
+                  marginRight: 10,
+                }}
+              >
+                <Feather name={actionRoom.icon as any} size={18} color={actionRoom.color} />
+              </View>
+              <Text style={{ fontSize: 16, fontWeight: '600', color: '#33291E', flex: 1 }}>
+                {actionRoom.name}
+              </Text>
+              <TouchableOpacity onPress={() => setActionRoom(null)} style={{ padding: 4 }}>
+                <Feather name="x" size={20} color="#8B7355" />
+              </TouchableOpacity>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TouchableOpacity
+                onPress={handleActionRename}
+                style={{
+                  flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                  paddingVertical: 10, borderRadius: 8,
+                  backgroundColor: '#F5F0E8',
+                }}
+              >
+                <Feather name="edit-2" size={16} color="#33291E" />
+                <Text style={{ marginLeft: 6, fontWeight: '500', color: '#33291E', fontSize: 14 }}>Renomear</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleActionDelete}
+                style={{
+                  flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                  paddingVertical: 10, borderRadius: 8,
+                  backgroundColor: '#FEF2F2',
+                }}
+              >
+                <Feather name="trash-2" size={16} color="#EF4444" />
+                <Text style={{ marginLeft: 6, fontWeight: '500', color: '#EF4444', fontSize: 14 }}>Excluir</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Rename form */}
+        {editingRoom && (
+          <View
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: 12,
+              padding: 16,
+              marginBottom: 16,
+              borderWidth: 1,
+              borderColor: '#EDE5D6',
+            }}
+          >
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#33291E', marginBottom: 8 }}>
+              Renomear "{editingRoom.name}"
+            </Text>
+            <TextInput
+              autoFocus
+              value={editName}
+              onChangeText={setEditName}
+              onSubmitEditing={handleSaveRename}
+              returnKeyType="done"
+              placeholder="Novo nome do cômodo"
+              placeholderTextColor="#9CA3AF"
+              style={{
+                borderWidth: 1,
+                borderColor: '#D6CDB9',
+                borderRadius: 8,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                fontSize: 16,
+                color: '#33291E',
+                marginBottom: 12,
+              }}
+            />
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
+              <TouchableOpacity
+                onPress={() => { setEditingRoom(null); setEditName(''); }}
+                style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
+              >
+                <Text style={{ color: '#8B7355', fontWeight: '500' }}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleSaveRename}
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  borderRadius: 8,
+                  backgroundColor: editName.trim() && editName.trim() !== editingRoom.name ? '#B85C38' : '#D6CDB9',
+                }}
+                disabled={!editName.trim() || editName.trim() === editingRoom.name}
+              >
+                <Text style={{ color: '#fff', fontWeight: '600' }}>Salvar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Add custom room form */}
+        {showAddForm && (
+          <View
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: 12,
+              padding: 16,
+              marginBottom: 16,
+              borderWidth: 1,
+              borderColor: '#EDE5D6',
+            }}
+          >
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#33291E', marginBottom: 8 }}>
+              Novo Cômodo
+            </Text>
+            <TextInput
+              ref={inputRef}
+              autoFocus
+              value={newRoomName}
+              onChangeText={setNewRoomName}
+              onSubmitEditing={handleAddCustomRoom}
+              returnKeyType="done"
+              placeholder="Nome do cômodo"
+              placeholderTextColor="#9CA3AF"
+              style={{
+                borderWidth: 1,
+                borderColor: '#D6CDB9',
+                borderRadius: 8,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                fontSize: 16,
+                color: '#33291E',
+                marginBottom: 12,
+              }}
+            />
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
+              <TouchableOpacity
+                onPress={() => { setShowAddForm(false); setNewRoomName(''); }}
+                style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
+              >
+                <Text style={{ color: '#8B7355', fontWeight: '500' }}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleAddCustomRoom}
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  borderRadius: 8,
+                  backgroundColor: newRoomName.trim() ? '#B85C38' : '#D6CDB9',
+                }}
+                disabled={!newRoomName.trim()}
+              >
+                <Text style={{ color: '#fff', fontWeight: '600' }}>Criar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         <View className="flex-row flex-wrap" style={{ gap: 12 }}>
           {rooms.map((room) => {
             const progress = getRoomProgress(room.id, items);
@@ -112,7 +374,7 @@ export default function RoomsScreen() {
               <Card
                 key={room.id}
                 onPress={() => handleRoomPress(room)}
-                onLongPress={() => handleDeleteRoom(room)}
+                onLongPress={() => handleRoomLongPress(room)}
                 className="mb-1"
                 style={{ width: '47%' }}
               >
@@ -151,9 +413,9 @@ export default function RoomsScreen() {
           })}
         </View>
       </ScrollView>
-      {!isAddingRooms && (
+      {!showAddForm && !editingRoom && !actionRoom && (
         <FAB
-          onPress={handleAddDefaultRooms}
+          onPress={() => setShowAddForm(true)}
           icon="plus"
         />
       )}

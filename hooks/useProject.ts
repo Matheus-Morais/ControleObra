@@ -19,6 +19,7 @@ export function useProjects() {
     queryKey: ['projects', user?.id],
     queryFn: () => getUserProjects(user!.id),
     enabled: !!user,
+    retry: 1,
   });
 }
 

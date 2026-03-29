@@ -28,6 +28,7 @@ export default function FinancialScreen() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [totalSpent, setTotalSpent] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -38,6 +39,8 @@ export default function FinancialScreen() {
       setLoading(false);
       return;
     }
+    setLoadError(false);
+    setLoading(true);
     try {
       const [txns, spent] = await Promise.all([
         getTransactions(activeProject.id),
@@ -46,6 +49,7 @@ export default function FinancialScreen() {
       setTransactions(txns);
       setTotalSpent(spent);
     } catch (error: any) {
+      setLoadError(true);
       showAlert('Erro', error?.message ?? 'Não foi possível carregar os dados financeiros');
     } finally {
       setLoading(false);
@@ -179,6 +183,17 @@ export default function FinancialScreen() {
   }
 
   if (loading) return <LoadingScreen />;
+
+  if (loadError) {
+    return (
+      <View className="flex-1 items-center justify-center bg-cream p-8">
+        <Feather name="alert-circle" size={40} color="#EF4444" />
+        <Text className="text-sand-800 text-lg font-semibold text-center mt-4 mb-2">Erro ao carregar dados</Text>
+        <Text className="text-sand-500 text-sm text-center mb-6">Verifique sua conexão e tente novamente</Text>
+        <Button title="Tentar novamente" onPress={() => loadData()} size="sm" />
+      </View>
+    );
+  }
 
   return (
     <ScrollView className="flex-1 bg-cream" contentContainerStyle={{ paddingBottom: 30 }}>

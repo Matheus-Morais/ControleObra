@@ -32,7 +32,7 @@ export default function RoomItemsScreen() {
   const activeProject = useProjectStore((s) => s.activeProject);
   const user = useAuthStore((s) => s.user);
   const { data: rooms } = useRooms(activeProject?.id);
-  const { data: items, isLoading } = useItems(roomId);
+  const { data: items, isLoading, isError, refetch } = useItems(roomId);
   const createItem = useCreateItem();
   const deleteItem = useDeleteItem();
 
@@ -141,6 +141,13 @@ export default function RoomItemsScreen() {
 
       {isLoading ? (
         <LoadingScreen />
+      ) : isError ? (
+        <View className="flex-1 items-center justify-center p-8">
+          <Feather name="alert-circle" size={40} color="#EF4444" />
+          <Text className="text-sand-800 text-lg font-semibold text-center mt-4 mb-2">Erro ao carregar itens</Text>
+          <Text className="text-sand-500 text-sm text-center mb-6">Verifique sua conexão e tente novamente</Text>
+          <Button title="Tentar novamente" onPress={() => refetch()} size="sm" />
+        </View>
       ) : (
         <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100, flexGrow: 1 }}>
           {filteredItems.length === 0 && !showAddForm ? (

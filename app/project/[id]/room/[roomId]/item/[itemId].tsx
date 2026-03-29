@@ -360,11 +360,21 @@ export default function ItemDetailScreen() {
             {editingBudget ? (
               <View className="flex-row items-center mt-2 gap-2">
                 <TextInput
-                  className="flex-1 border border-sand-300 rounded-lg px-3 py-2 text-base text-sand-900"
+                  style={{
+                    flex: 1,
+                    borderWidth: 1,
+                    borderColor: '#D6CDB9',
+                    borderRadius: 8,
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    fontSize: 16,
+                    color: '#33291E',
+                  }}
                   value={budgetValue}
                   onChangeText={setBudgetValue}
                   keyboardType="numeric"
                   placeholder="0.00"
+                  placeholderTextColor="#9CA3AF"
                 />
                 <Button title="Salvar" onPress={handleSaveBudget} size="sm" />
               </View>
@@ -393,12 +403,22 @@ export default function ItemDetailScreen() {
             {editingNotes ? (
               <View>
                 <TextInput
-                  className="border border-sand-300 rounded-lg px-3 py-2 text-base text-sand-900 min-h-[80px]"
+                  style={{
+                    borderWidth: 1,
+                    borderColor: '#D6CDB9',
+                    borderRadius: 8,
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    fontSize: 16,
+                    color: '#33291E',
+                    minHeight: 80,
+                    textAlignVertical: 'top',
+                  }}
                   value={notesValue}
                   onChangeText={setNotesValue}
                   multiline
-                  textAlignVertical="top"
                   placeholder="Adicione notas..."
+                  placeholderTextColor="#9CA3AF"
                 />
                 <Button title="Salvar" onPress={handleSaveNotes} size="sm" className="mt-2" />
               </View>
@@ -580,7 +600,16 @@ export default function ItemDetailScreen() {
       <View className="px-4 py-3 bg-white border-t border-sand-100">
         <View className="flex-row items-center gap-2">
           <TextInput
-            className="flex-1 border border-sand-300 rounded-xl px-4 py-2.5 text-base text-sand-900"
+            style={{
+              flex: 1,
+              borderWidth: 1,
+              borderColor: '#D6CDB9',
+              borderRadius: 12,
+              paddingHorizontal: 16,
+              paddingVertical: 10,
+              fontSize: 16,
+              color: '#33291E',
+            }}
             placeholder="Escreva um comentário..."
             value={newComment}
             onChangeText={setNewComment}

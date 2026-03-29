@@ -1,136 +1,271 @@
-# ControleObra
+<div align="center">
 
-Aplicativo mobile multiplataforma (iOS e Android) para casais e famílias gerenciarem compras e escolhas de materiais durante uma obra ou reforma residencial.
+# 🏗️ ControleObra
 
-## Stack Tecnológica
+**Gerencie sua obra ou reforma de forma colaborativa, organizada e inteligente.**
 
-- **React Native** com **Expo** (SDK 55)
-- **TypeScript** (strict mode)
-- **Expo Router** para navegação
-- **Supabase** como backend (Auth, PostgreSQL, Realtime, Storage)
-- **Zustand** para estado global
-- **TanStack Query** para cache e sincronização
-- **NativeWind** (Tailwind CSS) para estilização
-- **@gorhom/bottom-sheet** para modais
-- **@shopify/flash-list** para listas performáticas
+Aplicativo mobile multiplataforma para casais e famílias controlarem compras, materiais e gastos durante uma obra residencial — tudo sincronizado em tempo real.
 
-## Funcionalidades
+[![React Native](https://img.shields.io/badge/React%20Native-0.83-61DAFB?logo=react&logoColor=white)](https://reactnative.dev/)
+[![Expo](https://img.shields.io/badge/Expo-SDK%2055-000020?logo=expo&logoColor=white)](https://expo.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-BaaS-3FCF8E?logo=supabase&logoColor=white)](https://supabase.com/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-- Autenticação (e-mail/senha)
-- Projetos compartilhados via código de convite
-- Organização por cômodos com categorias pré-definidas
-- Gerenciamento de itens com status (Pesquisando → Decidido → Comprado → Instalado)
-- Múltiplas opções de produto por item para comparação
-- Upload de fotos dos produtos
-- Avaliação com estrelas (1-5)
-- Comentários por item
-- Dashboard com resumo financeiro e progresso
-- Gráfico de gastos por cômodo
+</div>
+
+---
+
+## 📋 Sobre o Projeto
+
+O **ControleObra** nasceu de uma necessidade real: gerenciar as centenas de decisões que um casal precisa tomar durante uma reforma. De "qual piso escolher para a sala?" até "quanto já gastamos no banheiro?", o app centraliza tudo em um único lugar, compartilhado em tempo real.
+
+### O problema que resolve
+
+- Planilhas desorganizadas com informações espalhadas
+- Falta de visibilidade compartilhada do andamento da obra
+- Dificuldade de comparar opções de produtos lado a lado
+- Controle financeiro manual e propenso a erros
+
+### A solução
+
+Um app intuitivo que organiza a obra por cômodos, permite salvar e comparar produtos, acompanhar o status de cada item (pesquisando → decidido → comprado → instalado) e manter o controle financeiro — tudo acessível para todos os envolvidos no projeto.
+
+---
+
+## ✨ Funcionalidades
+
+### Gestão de Projetos
+- Criar projetos de obra com nome personalizado
+- Compartilhar projetos via **código de convite** de 6 caracteres
+- Editar nome do projeto a qualquer momento
+- Trocar entre projetos diferentes
+
+### Organização por Cômodos
+- **12 cômodos pré-configurados** (Sala, Cozinha, Quartos, Banheiros, etc.)
+- Criar cômodos personalizados com nomes livres
+- Renomear e excluir cômodos
+- Ícones e cores distintas para cada cômodo
+- Barra de progresso por cômodo
+
+### Gestão de Itens
+- Cadastro de itens por cômodo com categorias pré-definidas
+- **4 estados de progresso**: Pesquisando → Decidido → Comprado → Instalado
+- Filtros por status
+- Campo de orçamento e notas por item
+- Atividade recente no dashboard
+
+### Comparação de Produtos
+- Múltiplas opções de produto por item
+- Campos: modelo, marca, preço, loja, URL
+- **Upload de fotos** dos produtos
+- Avaliação com **estrelas (1-5)**
+- Marcar opção escolhida
+
+### Financeiro
+- Dashboard com **resumo financeiro** (orçamento vs gasto)
+- **Gráfico de gastos por cômodo**
 - Registro de pagamentos/transações
-- Exportação de relatório em PDF
-- Compartilhamento de item via WhatsApp
-- Sincronização em tempo real entre usuários
-- Tema claro e escuro
+- Exportação de **relatório em PDF**
+- Progresso geral da obra em percentual
 
-## Pré-requisitos
+### Colaboração
+- **Sincronização em tempo real** via Supabase Realtime
+- Comentários por item
+- Visualização compartilhada entre membros
 
-- Node.js 18+
-- npm ou yarn
-- Expo CLI (`npm install -g expo-cli`)
-- Conta no [Supabase](https://supabase.com)
+---
 
-## Setup
+## 🛠️ Stack Tecnológica
 
-### 1. Clonar e instalar dependências
+| Camada | Tecnologia | Propósito |
+|--------|-----------|-----------|
+| **Frontend** | React Native + Expo SDK 55 | App cross-platform (iOS, Android, Web) |
+| **Linguagem** | TypeScript (strict mode) | Tipagem estática e segurança |
+| **Navegação** | Expo Router | File-based routing |
+| **Estilização** | NativeWind (Tailwind CSS) | Utility-first CSS nativo |
+| **Estado Global** | Zustand | Store leve e reativo |
+| **Data Fetching** | TanStack Query v5 | Cache, retry, invalidação automática |
+| **Backend** | Supabase | Auth, PostgreSQL, Realtime, Storage |
+| **Segurança** | Row Level Security (RLS) | Isolamento de dados por projeto |
+
+---
+
+## 📐 Arquitetura
+
+```
+ControleObra/
+├── app/                        # Rotas e telas (Expo Router)
+│   ├── (auth)/                 # Login e registro
+│   │   ├── login.tsx
+│   │   └── register.tsx
+│   ├── (tabs)/                 # Tabs principais
+│   │   ├── index.tsx           # Dashboard
+│   │   ├── rooms.tsx           # Cômodos
+│   │   ├── financial.tsx       # Financeiro
+│   │   └── settings.tsx        # Ajustes
+│   ├── project/                # Telas de projeto
+│   │   └── [id]/room/[roomId]/ # Itens e detalhes
+│   ├── project-setup.tsx       # Seleção/criação de projeto
+│   └── _layout.tsx             # Auth guard e providers
+├── components/ui/              # Componentes reutilizáveis
+│   ├── Button.tsx
+│   ├── Card.tsx
+│   ├── Input.tsx
+│   ├── FAB.tsx
+│   ├── ProgressBar.tsx
+│   ├── StatusChip.tsx
+│   ├── StarRating.tsx
+│   ├── EmptyState.tsx
+│   └── LoadingScreen.tsx
+├── services/                   # Camada de dados (Supabase)
+│   ├── auth.ts
+│   ├── items.ts
+│   ├── rooms.ts
+│   ├── projects.ts
+│   └── supabase.ts             # Client com timeout
+├── hooks/                      # React Query hooks
+│   ├── useItems.ts
+│   ├── useRooms.ts
+│   ├── useProject.ts
+│   ├── useItemOptions.ts
+│   └── useRealtime.ts
+├── stores/                     # Zustand stores
+│   ├── authStore.ts
+│   └── projectStore.ts
+├── types/                      # TypeScript interfaces
+├── constants/                  # Cômodos padrão, categorias
+├── utils/                      # Formatação, alertas
+└── supabase/
+    └── schema.sql              # Schema completo com RLS
+```
+
+---
+
+## 🗄️ Banco de Dados
+
+Schema PostgreSQL com **Row Level Security** habilitado em todas as tabelas:
+
+| Tabela | Descrição |
+|--------|-----------|
+| `profiles` | Perfis de usuário (sincronizado com auth.users via trigger) |
+| `projects` | Projetos de obra |
+| `project_members` | Membros dos projetos (com roles: owner/member) |
+| `rooms` | Cômodos do projeto |
+| `items` | Itens de cada cômodo com status e orçamento |
+| `item_options` | Opções de produto para comparação |
+| `item_option_photos` | Fotos das opções (Supabase Storage) |
+| `item_comments` | Comentários por item |
+| `transactions` | Pagamentos realizados |
+
+### Funções SQL
+
+- `is_project_member()` — verifica membros (SECURITY DEFINER)
+- `find_project_by_invite_code()` — busca projeto por código (bypassa RLS)
+- `handle_new_user()` — cria perfil automaticamente no signup (trigger)
+
+---
+
+## 🚀 Como Executar
+
+### Pré-requisitos
+
+- **Node.js** 18+
+- **npm** ou **yarn**
+- Conta no [Supabase](https://supabase.com) (gratuito)
+
+### 1. Clone e instale
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/seu-usuario/ControleObra.git
 cd ControleObra
 npm install
 ```
 
-### 2. Configurar Supabase
+### 2. Configure o Supabase
 
 1. Crie um projeto no [Supabase Dashboard](https://app.supabase.com)
-2. No **SQL Editor**, execute o conteúdo de `supabase/schema.sql`
-3. Em **Authentication > Providers**, habilite Email e (opcionalmente) Google OAuth
-4. Em **Storage**, verifique se o bucket `item-photos` foi criado (o script SQL já faz isso)
+2. No **SQL Editor**, execute todo o conteúdo de `supabase/schema.sql`
+3. Em **Authentication > Providers**, habilite Email
+4. Em **Storage**, verifique se o bucket `item-photos` foi criado
 
 ### 3. Variáveis de ambiente
-
-Copie `.env.example` para `.env` e preencha:
 
 ```bash
 cp .env.example .env
 ```
 
-```
+Preencha com as credenciais do Supabase (Settings > API):
+
+```env
 EXPO_PUBLIC_SUPABASE_URL=https://seu-projeto.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=sua-anon-key
 ```
 
-Essas informações estão em **Settings > API** no dashboard do Supabase.
-
-### 4. Executar
+### 4. Execute
 
 ```bash
-# Desenvolvimento
+# Iniciar servidor de desenvolvimento
 npx expo start
 
-# Android
-npx expo start --android
+# Abrir no celular via Expo Go
+# Escaneie o QR Code com o app Expo Go
 
-# iOS
-npx expo start --ios
+# Web
+npx expo start --web
 ```
 
-## Estrutura do Projeto
+---
 
+## 📱 Como Usar
+
+1. **Crie uma conta** com e-mail e senha
+2. **Crie um projeto** de obra (ex: "Nossa Casa - Rua X")
+3. **Compartilhe** o código de convite com seu parceiro(a)
+4. **Adicione cômodos** padrão ou personalizados
+5. **Cadastre itens** em cada cômodo (piso, móveis, etc.)
+6. **Compare produtos** adicionando opções com fotos e preços
+7. **Atualize o status** conforme avança (pesquisando → comprado)
+8. **Acompanhe os gastos** no painel financeiro
+
+---
+
+## 🌐 Deploy
+
+### Vercel (Web)
+
+```bash
+npx expo export -p web
+vercel --prod --yes --name controleobra
 ```
-ControleObra/
-├── app/                    # Rotas e telas (Expo Router)
-│   ├── (auth)/             # Login, registro, setup de projeto
-│   ├── (tabs)/             # Tabs principais (Dashboard, Cômodos, Financeiro, Ajustes)
-│   ├── project/            # Rotas de projeto (itens por cômodo, detalhe)
-│   └── onboarding.tsx      # Telas de onboarding
-├── components/
-│   └── ui/                 # Componentes reutilizáveis
-├── services/               # Chamadas ao Supabase
-├── stores/                 # Zustand stores
-├── hooks/                  # Custom hooks (React Query)
-├── types/                  # TypeScript interfaces
-├── constants/              # Cores, cômodos padrão, categorias
-├── utils/                  # Formatação, compartilhamento
-└── supabase/
-    └── schema.sql          # Schema completo com RLS
+
+### EAS Build (Android/iOS)
+
+```bash
+npx eas build --platform android --profile preview
 ```
 
-## Banco de Dados
+---
 
-O schema SQL inclui:
+## 🤝 Compartilhando o Projeto
 
-| Tabela | Descrição |
-|--------|-----------|
-| `profiles` | Perfis de usuário (sincronizado com auth.users) |
-| `projects` | Projetos de obra |
-| `project_members` | Membros dos projetos |
-| `rooms` | Cômodos do projeto |
-| `items` | Itens de cada cômodo |
-| `item_options` | Opções de produto para comparação |
-| `item_option_photos` | Fotos das opções |
-| `item_comments` | Comentários por item |
-| `transactions` | Pagamentos realizados |
-
-Todas as tabelas possuem **Row Level Security (RLS)** configurado.
-
-## Compartilhando o Projeto
-
-Para compartilhar com seu parceiro(a):
+Para convidar alguém para o seu projeto de obra:
 
 1. Acesse **Ajustes** no app
 2. Copie o **código de convite** de 6 caracteres
-3. O parceiro(a) entra no app, cria uma conta e usa o código para entrar no projeto
+3. A pessoa cria uma conta e usa o código em **"Entrar com Código"**
+4. Pronto! Ambos veem e editam tudo em tempo real
 
-## Licença
+---
 
-Projeto pessoal - uso privado.
+## 📄 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+
+---
+
+<div align="center">
+
+**Desenvolvido com dedicação para simplificar a experiência de reformar.**
+
+</div>

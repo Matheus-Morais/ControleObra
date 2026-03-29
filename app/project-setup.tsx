@@ -6,20 +6,21 @@ import {
   Platform,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAuthStore } from '../stores/authStore';
 import { useProjectStore } from '../stores/projectStore';
 import { useCreateProject, useJoinProject, useProjects } from '../hooks/useProject';
-import { Button, Input, Card, LoadingScreen } from '../components/ui';
+import { Button, Input, Card } from '../components/ui';
 import { showAlert } from '../utils/alert';
 
 export default function ProjectSetupScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const setActiveProject = useProjectStore((s) => s.setActiveProject);
-  const { data: projects, isLoading } = useProjects();
+  const { data: projects, isLoading, isError, refetch } = useProjects();
   const createProject = useCreateProject();
   const joinProject = useJoinProject();
 
@@ -60,8 +61,6 @@ export default function ProjectSetupScreen() {
     router.replace('/(tabs)');
   }
 
-  if (isLoading) return <LoadingScreen />;
-
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -89,7 +88,26 @@ export default function ProjectSetupScreen() {
             Selecione um projeto ou crie um novo
           </Text>
 
-          {projects && projects.length > 0 && (
+          {/* Projects list -- inline loading, never blocks the page */}
+          {isLoading ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 20, marginBottom: 16 }}>
+              <ActivityIndicator size="small" color="#C1694F" />
+              <Text style={{ marginLeft: 8, color: '#8B7355', fontSize: 14 }}>Carregando projetos...</Text>
+            </View>
+          ) : isError ? (
+            <View style={{
+              backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA',
+              borderRadius: 12, padding: 16, marginBottom: 16, flexDirection: 'row', alignItems: 'center',
+            }}>
+              <Feather name="alert-circle" size={20} color="#EF4444" />
+              <Text style={{ color: '#DC2626', fontSize: 14, marginLeft: 8, flex: 1 }}>
+                Erro ao carregar projetos.
+              </Text>
+              <TouchableOpacity onPress={() => refetch()}>
+                <Text style={{ color: '#C1694F', fontWeight: '500', fontSize: 14 }}>Tentar novamente</Text>
+              </TouchableOpacity>
+            </View>
+          ) : projects && projects.length > 0 ? (
             <View className="mb-6">
               {projects.map((project) => (
                 <Card
@@ -114,7 +132,7 @@ export default function ProjectSetupScreen() {
                 </Card>
               ))}
             </View>
-          )}
+          ) : null}
 
           <View className="flex-row gap-3 mb-6">
             <TouchableOpacity

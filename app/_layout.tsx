@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
 import { useAuthStore } from '../stores/authStore';
+import { useProjectStore } from '../stores/projectStore';
 import { getProfile } from '../services/auth';
 import { LoadingScreen } from '../components/ui';
 
@@ -15,7 +16,8 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5,
-      retry: 2,
+      retry: 1,
+      retryDelay: 1000,
     },
   },
 });
@@ -78,6 +80,8 @@ function forceCleanSession(
   setSession(null);
   setProfile(null);
   setLoading(false);
+  useProjectStore.getState().reset();
+  queryClient.clear();
 }
 
 export default function RootLayout() {
@@ -125,6 +129,8 @@ export default function RootLayout() {
       if (event === 'SIGNED_OUT') {
         setSession(null);
         setProfile(null);
+        useProjectStore.getState().reset();
+        queryClient.clear();
         return;
       }
 

@@ -1,9 +1,10 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAuthStore } from '../../stores/authStore';
 import { useProjectStore } from '../../stores/projectStore';
+import { useUpdateProject } from '../../hooks/useProject';
 import { signOut } from '../../services/auth';
 import { Card } from '../../components/ui';
 import { showAlert } from '../../utils/alert';
@@ -14,6 +15,10 @@ export default function SettingsScreen() {
   const { activeProject } = useProjectStore();
   const reset = useAuthStore((s) => s.reset);
   const resetProject = useProjectStore((s) => s.reset);
+  const updateProject = useUpdateProject();
+
+  const [editingName, setEditingName] = useState(false);
+  const [projectName, setProjectName] = useState('');
 
   async function doSignOut() {
     try {
@@ -33,6 +38,30 @@ export default function SettingsScreen() {
   function handleSwitchProject() {
     resetProject();
     router.replace('/project-setup');
+  }
+
+  function handleStartEditName() {
+    if (!activeProject) return;
+    setProjectName(activeProject.name);
+    setEditingName(true);
+  }
+
+  async function handleSaveName() {
+    const name = projectName.trim();
+    if (!name || !activeProject) return;
+    if (name === activeProject.name) {
+      setEditingName(false);
+      return;
+    }
+    try {
+      await updateProject.mutateAsync({
+        projectId: activeProject.id,
+        updates: { name },
+      });
+      setEditingName(false);
+    } catch (error: any) {
+      showAlert('Erro', error?.message ?? 'Erro ao renomear projeto');
+    }
   }
 
   return (
@@ -58,9 +87,71 @@ export default function SettingsScreen() {
           <Text className="text-sand-500 text-xs uppercase font-medium mb-2">
             Projeto Ativo
           </Text>
-          <Text className="text-sand-900 font-semibold text-base">
-            {activeProject.name}
-          </Text>
+
+          {editingName ? (
+            <View>
+              <TextInput
+                autoFocus
+                value={projectName}
+                onChangeText={setProjectName}
+                onSubmitEditing={handleSaveName}
+                returnKeyType="done"
+                placeholder="Nome do projeto"
+                placeholderTextColor="#9CA3AF"
+                style={{
+                  borderWidth: 1,
+                  borderColor: '#D6CDB9',
+                  borderRadius: 8,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  fontSize: 16,
+                  color: '#33291E',
+                  marginBottom: 10,
+                }}
+              />
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
+                <TouchableOpacity
+                  onPress={() => setEditingName(false)}
+                  style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 }}
+                >
+                  <Text style={{ color: '#8B7355', fontWeight: '500' }}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleSaveName}
+                  disabled={!projectName.trim() || projectName.trim() === activeProject.name || updateProject.isPending}
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
+                    borderRadius: 8,
+                    backgroundColor: projectName.trim() && projectName.trim() !== activeProject.name ? '#B85C38' : '#D6CDB9',
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '600' }}>
+                    {updateProject.isPending ? 'Salvando...' : 'Salvar'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity
+              onPress={handleStartEditName}
+              style={{ flexDirection: 'row', alignItems: 'center' }}
+              activeOpacity={0.7}
+            >
+              <Text className="text-sand-900 font-semibold text-base flex-1">
+                {activeProject.name}
+              </Text>
+              <View style={{
+                backgroundColor: '#F5F0E8', borderRadius: 6,
+                paddingHorizontal: 8, paddingVertical: 4,
+                flexDirection: 'row', alignItems: 'center',
+              }}>
+                <Feather name="edit-2" size={12} color="#8B7355" />
+                <Text style={{ marginLeft: 4, fontSize: 12, color: '#8B7355', fontWeight: '500' }}>Editar</Text>
+              </View>
+            </TouchableOpacity>
+          )}
+
           <View className="flex-row items-center mt-2">
             <Feather name="key" size={14} color="#A89270" />
             <Text className="text-sand-500 text-sm ml-1.5">
