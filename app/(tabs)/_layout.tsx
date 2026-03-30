@@ -1,12 +1,14 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useProjectStore } from '../../stores/projectStore';
 import { useRealtimeSubscription } from '../../hooks/useRealtime';
 
 export default function TabLayout() {
   const activeProject = useProjectStore((s) => s.activeProject);
   useRealtimeSubscription(activeProject?.id);
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
@@ -17,8 +19,8 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: '#FAFAF8',
           borderTopColor: '#EDE5D6',
-          height: 88,
-          paddingBottom: 44,
+          height: 56 + insets.bottom,
+          paddingBottom: insets.bottom,
           paddingTop: 8,
         },
         tabBarActiveTintColor: '#C1694F',
