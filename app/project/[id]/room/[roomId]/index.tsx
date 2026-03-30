@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -40,6 +40,13 @@ export default function RoomItemsScreen() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [newItemCategory, setNewItemCategory] = useState('');
+
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+  useEffect(() => {
+    if (!isLoading) { setLoadingTimeout(false); return; }
+    const t = setTimeout(() => setLoadingTimeout(true), 15000);
+    return () => clearTimeout(t);
+  }, [isLoading]);
 
   const room = rooms?.find((r) => r.id === roomId);
   const defaultRoom = DEFAULT_ROOMS.find((dr) => dr.name === room?.name);
@@ -139,14 +146,16 @@ export default function RoomItemsScreen() {
         ))}
       </ScrollView>
 
-      {isLoading ? (
+      {isLoading && !loadingTimeout ? (
         <LoadingScreen />
-      ) : isError ? (
+      ) : isError || loadingTimeout ? (
         <View className="flex-1 items-center justify-center p-8">
           <Feather name="alert-circle" size={40} color="#EF4444" />
-          <Text className="text-sand-800 text-lg font-semibold text-center mt-4 mb-2">Erro ao carregar itens</Text>
+          <Text className="text-sand-800 text-lg font-semibold text-center mt-4 mb-2">
+            {loadingTimeout ? 'Conexão lenta' : 'Erro ao carregar itens'}
+          </Text>
           <Text className="text-sand-500 text-sm text-center mb-6">Verifique sua conexão e tente novamente</Text>
-          <Button title="Tentar novamente" onPress={() => refetch()} size="sm" />
+          <Button title="Tentar novamente" onPress={() => { setLoadingTimeout(false); refetch(); }} size="sm" />
         </View>
       ) : (
         <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100, flexGrow: 1 }}>

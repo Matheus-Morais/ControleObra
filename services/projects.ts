@@ -55,14 +55,24 @@ export async function joinProject(inviteCode: string, userId: string): Promise<P
 }
 
 export async function getUserProjects(userId: string): Promise<Project[]> {
-  const { data, error } = await supabase
-    .from('project_members')
-    .select('project_id, projects(*)')
-    .eq('user_id', userId);
+  const SERVICE_TIMEOUT = 12000;
 
-  if (error) throw error;
-  const rows = (data ?? []) as unknown as ProjectMemberRow[];
-  return rows.map((pm) => pm.projects).filter((p): p is Project => p != null);
+  const query = async () => {
+    const { data, error } = await supabase
+      .from('project_members')
+      .select('project_id, projects(*)')
+      .eq('user_id', userId);
+
+    if (error) throw error;
+    const rows = (data ?? []) as unknown as ProjectMemberRow[];
+    return rows.map((pm) => pm.projects).filter((p): p is Project => p != null);
+  };
+
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('Timeout ao carregar projetos')), SERVICE_TIMEOUT),
+  );
+
+  return Promise.race([query(), timeout]);
 }
 
 export async function getProjectMembers(

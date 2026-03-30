@@ -182,15 +182,24 @@ export default function FinancialScreen() {
     return <EmptyState icon="dollar-sign" title="Nenhum projeto selecionado" />;
   }
 
-  if (loading) return <LoadingScreen />;
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+  useEffect(() => {
+    if (!loading) { setLoadingTimeout(false); return; }
+    const t = setTimeout(() => setLoadingTimeout(true), 15000);
+    return () => clearTimeout(t);
+  }, [loading]);
 
-  if (loadError) {
+  if (loading && !loadingTimeout) return <LoadingScreen />;
+
+  if (loadError || loadingTimeout) {
     return (
       <View className="flex-1 items-center justify-center bg-cream p-8">
         <Feather name="alert-circle" size={40} color="#EF4444" />
-        <Text className="text-sand-800 text-lg font-semibold text-center mt-4 mb-2">Erro ao carregar dados</Text>
+        <Text className="text-sand-800 text-lg font-semibold text-center mt-4 mb-2">
+          {loadingTimeout ? 'Conexão lenta' : 'Erro ao carregar dados'}
+        </Text>
         <Text className="text-sand-500 text-sm text-center mb-6">Verifique sua conexão e tente novamente</Text>
-        <Button title="Tentar novamente" onPress={() => loadData()} size="sm" />
+        <Button title="Tentar novamente" onPress={() => { setLoadingTimeout(false); loadData(); }} size="sm" />
       </View>
     );
   }

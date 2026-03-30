@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -23,6 +23,19 @@ export default function ProjectSetupScreen() {
   const { data: projects, isLoading, isError, refetch } = useProjects();
   const createProject = useCreateProject();
   const joinProject = useJoinProject();
+
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setLoadingTimeout(false);
+      return;
+    }
+    const timer = setTimeout(() => setLoadingTimeout(true), 15000);
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+
+  const showError = isError || loadingTimeout;
 
   const [mode, setMode] = useState<'select' | 'create' | 'join'>('select');
   const [projectName, setProjectName] = useState('');
@@ -89,21 +102,21 @@ export default function ProjectSetupScreen() {
           </Text>
 
           {/* Projects list -- inline loading, never blocks the page */}
-          {isLoading ? (
+          {isLoading && !loadingTimeout ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 20, marginBottom: 16 }}>
               <ActivityIndicator size="small" color="#C1694F" />
               <Text style={{ marginLeft: 8, color: '#8B7355', fontSize: 14 }}>Carregando projetos...</Text>
             </View>
-          ) : isError ? (
+          ) : showError ? (
             <View style={{
               backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA',
               borderRadius: 12, padding: 16, marginBottom: 16, flexDirection: 'row', alignItems: 'center',
             }}>
               <Feather name="alert-circle" size={20} color="#EF4444" />
               <Text style={{ color: '#DC2626', fontSize: 14, marginLeft: 8, flex: 1 }}>
-                Erro ao carregar projetos.
+                {loadingTimeout ? 'Conexão lenta. Tente novamente.' : 'Erro ao carregar projetos.'}
               </Text>
-              <TouchableOpacity onPress={() => refetch()}>
+              <TouchableOpacity onPress={() => { setLoadingTimeout(false); refetch(); }}>
                 <Text style={{ color: '#C1694F', fontWeight: '500', fontSize: 14 }}>Tentar novamente</Text>
               </TouchableOpacity>
             </View>

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Keyboard } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -159,15 +159,24 @@ export default function RoomsScreen() {
     return <EmptyState icon="home" title="Nenhum projeto selecionado" description="Selecione ou crie um projeto para começar" />;
   }
 
-  if (roomsLoading) return <LoadingScreen />;
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+  useEffect(() => {
+    if (!roomsLoading) { setLoadingTimeout(false); return; }
+    const t = setTimeout(() => setLoadingTimeout(true), 15000);
+    return () => clearTimeout(t);
+  }, [roomsLoading]);
 
-  if (roomsError) {
+  if (roomsLoading && !loadingTimeout) return <LoadingScreen />;
+
+  if (roomsError || loadingTimeout) {
     return (
       <View className="flex-1 items-center justify-center bg-cream p-8">
         <Feather name="alert-circle" size={40} color="#EF4444" />
-        <Text className="text-sand-800 text-lg font-semibold text-center mt-4 mb-2">Erro ao carregar cômodos</Text>
+        <Text className="text-sand-800 text-lg font-semibold text-center mt-4 mb-2">
+          {loadingTimeout ? 'Conexão lenta' : 'Erro ao carregar cômodos'}
+        </Text>
         <Text className="text-sand-500 text-sm text-center mb-6">Verifique sua conexão e tente novamente</Text>
-        <Button title="Tentar novamente" onPress={() => refetchRooms()} size="sm" />
+        <Button title="Tentar novamente" onPress={() => { setLoadingTimeout(false); refetchRooms(); }} size="sm" />
       </View>
     );
   }

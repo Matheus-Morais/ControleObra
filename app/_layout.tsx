@@ -29,6 +29,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5,
+      networkMode: 'always',
       retry: (failureCount, error) => {
         if (isAuthError(error)) return false;
         return failureCount < 1;
@@ -37,6 +38,7 @@ const queryClient = new QueryClient({
     },
     mutations: {
       retry: false,
+      networkMode: 'always',
     },
   },
 });

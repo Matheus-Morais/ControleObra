@@ -32,19 +32,10 @@ const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 const FETCH_TIMEOUT_MS = 10000;
 
 const fetchWithTimeout: typeof fetch = (input, init) => {
-  const controller = new AbortController();
-  const existingSignal = init?.signal;
-
-  if (existingSignal?.aborted) {
-    controller.abort();
-  } else {
-    existingSignal?.addEventListener('abort', () => controller.abort());
-  }
-
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  return fetch(input, { ...init, signal: controller.signal }).finally(() =>
-    clearTimeout(timeout),
-  );
+  const timeoutPromise = new Promise<Response>((_, reject) => {
+    setTimeout(() => reject(new Error('Request timeout')), FETCH_TIMEOUT_MS);
+  });
+  return Promise.race([fetch(input, init), timeoutPromise]);
 };
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {

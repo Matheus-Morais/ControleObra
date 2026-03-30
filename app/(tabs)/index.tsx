@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -80,15 +80,24 @@ export default function DashboardScreen() {
     );
   }
 
-  if (isLoading) return <LoadingScreen />;
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+  useEffect(() => {
+    if (!isLoading) { setLoadingTimeout(false); return; }
+    const t = setTimeout(() => setLoadingTimeout(true), 15000);
+    return () => clearTimeout(t);
+  }, [isLoading]);
 
-  if (isError) {
+  if (isLoading && !loadingTimeout) return <LoadingScreen />;
+
+  if (isError || loadingTimeout) {
     return (
       <View className="flex-1 items-center justify-center bg-cream p-8">
         <Feather name="alert-circle" size={40} color="#EF4444" />
-        <Text className="text-sand-800 text-lg font-semibold text-center mt-4 mb-2">Erro ao carregar dados</Text>
+        <Text className="text-sand-800 text-lg font-semibold text-center mt-4 mb-2">
+          {loadingTimeout ? 'Conexão lenta' : 'Erro ao carregar dados'}
+        </Text>
         <Text className="text-sand-500 text-sm text-center mb-6">Verifique sua conexão e tente novamente</Text>
-        <Button title="Tentar novamente" onPress={() => refetch()} size="sm" />
+        <Button title="Tentar novamente" onPress={() => { setLoadingTimeout(false); refetch(); }} size="sm" />
       </View>
     );
   }
