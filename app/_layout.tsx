@@ -10,14 +10,33 @@ import { useProjectStore } from '../stores/projectStore';
 import { getProfile } from '../services/auth';
 import { LoadingScreen } from '../components/ui';
 
-const AUTH_TIMEOUT_MS = 8000;
+const AUTH_TIMEOUT_MS = 10000;
+
+function isAuthError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const e = error as any;
+  const msg = (e.message ?? e.msg ?? '').toLowerCase();
+  const code = e.code ?? e.status ?? 0;
+  return (
+    code === 401 || code === 403 ||
+    msg.includes('jwt') || msg.includes('token') ||
+    msg.includes('refresh') || msg.includes('not authenticated') ||
+    msg.includes('invalid claim')
+  );
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5,
-      retry: 1,
+      retry: (failureCount, error) => {
+        if (isAuthError(error)) return false;
+        return failureCount < 1;
+      },
       retryDelay: 1000,
+    },
+    mutations: {
+      retry: false,
     },
   },
 });
@@ -84,39 +103,54 @@ function forceCleanSession(
   queryClient.clear();
 }
 
+queryClient.getQueryCache().config.onError = (error) => {
+  if (isAuthError(error)) {
+    console.warn('Auth error em query, forçando sign out:', (error as any)?.message);
+    const store = useAuthStore.getState();
+    forceCleanSession(store.setSession, store.setProfile, store.setLoading);
+  }
+};
+
 export default function RootLayout() {
   const { setSession, setProfile, setLoading } = useAuthStore();
 
   useEffect(() => {
-    supabase.auth
-      .getSession()
-      .then(({ data: { session }, error }) => {
-        if (error) {
-          console.warn('Erro na sessão:', error.message);
-          forceCleanSession(setSession, setProfile, setLoading);
-          return;
-        }
+    async function initAuth() {
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-        if (!session) {
+        if (sessionError || !session) {
+          if (sessionError) console.warn('Erro na sessão:', sessionError.message);
           setSession(null);
           setLoading(false);
           return;
         }
 
-        setSession(session);
-        if (session.user) {
-          getProfile(session.user.id)
-            .then(setProfile)
-            .catch((err) => {
-              console.warn('Erro ao carregar perfil:', err?.message);
-            });
+        // Validate token server-side (triggers refresh if expired)
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+        if (userError || !user) {
+          console.warn('Sessão inválida:', userError?.message ?? 'user null');
+          forceCleanSession(setSession, setProfile, setLoading);
+          return;
         }
+
+        // Session is valid — get the fresh session after potential refresh
+        const { data: { session: freshSession } } = await supabase.auth.getSession();
+        setSession(freshSession ?? session);
+
+        getProfile(user.id)
+          .then(setProfile)
+          .catch((err) => console.warn('Erro ao carregar perfil:', err?.message));
+
         setLoading(false);
-      })
-      .catch((err) => {
-        console.warn('getSession falhou:', err?.message);
+      } catch (err: any) {
+        console.warn('initAuth falhou:', err?.message);
         forceCleanSession(setSession, setProfile, setLoading);
-      });
+      }
+    }
+
+    initAuth();
 
     const {
       data: { subscription },
