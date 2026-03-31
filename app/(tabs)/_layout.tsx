@@ -1,6 +1,7 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useProjectStore } from '../../stores/projectStore';
 import { useRealtimeSubscription } from '../../hooks/useRealtime';
@@ -9,6 +10,7 @@ export default function TabLayout() {
   const activeProject = useProjectStore((s) => s.activeProject);
   useRealtimeSubscription(activeProject?.id);
   const insets = useSafeAreaInsets();
+  const isAndroid = Platform.OS === 'android';
 
   return (
     <Tabs
@@ -19,14 +21,24 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: '#FAFAF8',
           borderTopColor: '#EDE5D6',
-          height: 56 + insets.bottom,
-          paddingBottom: insets.bottom,
-          paddingTop: 8,
+          height: (isAndroid ? 62 : 56) + insets.bottom,
+          paddingBottom: insets.bottom + (isAndroid ? 2 : 0),
+          paddingTop: isAndroid ? 4 : 8,
           marginBottom: 2,
+        },
+        tabBarItemStyle: {
+          justifyContent: 'center',
+          paddingVertical: isAndroid ? 2 : 0,
         },
         tabBarActiveTintColor: '#C1694F',
         tabBarInactiveTintColor: '#A89270',
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '500',
+          lineHeight: 14,
+          marginTop: isAndroid ? -1 : 0,
+          paddingBottom: isAndroid ? 1 : 0,
+        },
       }}
     >
       <Tabs.Screen

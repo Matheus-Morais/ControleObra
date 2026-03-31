@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { useItems, useCreateItem, useDeleteItem, useUpdateItemStatus } from '../../../../../hooks/useItems';
+import { useItems, useCreateItem, useDeleteItem, useUpdateItemStatus, useProjectItems } from '../../../../../hooks/useItems';
 import { useRooms } from '../../../../../hooks/useRooms';
 import { useProjectStore } from '../../../../../stores/projectStore';
 import { useAuthStore } from '../../../../../stores/authStore';
@@ -59,6 +59,7 @@ export default function RoomItemsScreen() {
   const user = useAuthStore((s) => s.user);
   const { data: rooms } = useRooms(activeProject?.id);
   const { data: items, isLoading, isError, refetch } = useItems(roomId);
+  const { data: projectItems } = useProjectItems(projectId);
   const createItem = useCreateItem();
   const deleteItem = useDeleteItem();
 
@@ -80,9 +81,15 @@ export default function RoomItemsScreen() {
 
   const room = rooms?.find((r) => r.id === roomId);
   const categories = useMemo(() => resolveRoomCategories(room?.name), [room?.name]);
+  const projectCategories = useMemo(
+    () =>
+      [...new Set((projectItems ?? []).map((i) => (i.category || '').trim()).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b)),
+    [projectItems]
+  );
   const availableCategories = useMemo(
-    () => [...new Set([...categories, ...customCategories])],
-    [categories, customCategories]
+    () => [...new Set([...categories, ...projectCategories, ...customCategories])],
+    [categories, projectCategories, customCategories]
   );
   const filteredCategories = useMemo(() => {
     const term = normalizeLabel(categorySearch);
@@ -304,9 +311,22 @@ export default function RoomItemsScreen() {
                     <Text className="text-sand-900 font-semibold text-base">
                       {item.name}
                     </Text>
-                    <Text className="text-sand-500 text-xs mt-0.5">
-                      {item.category}
-                    </Text>
+                    <View
+                      style={{
+                        alignSelf: 'flex-start',
+                        backgroundColor: '#F5F0E8',
+                        borderColor: '#D6CDB9',
+                        borderWidth: 1,
+                        borderRadius: 999,
+                        paddingHorizontal: 10,
+                        paddingVertical: 3,
+                        marginTop: 6,
+                      }}
+                    >
+                      <Text style={{ color: '#6F5A3B', fontSize: 11, fontWeight: '600' }}>
+                        Categoria: {item.category}
+                      </Text>
+                    </View>
                     {item.budget > 0 && (
                       <Text className="text-sand-600 text-sm mt-1">
                         {formatCurrency(item.budget)}
