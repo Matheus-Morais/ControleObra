@@ -6,6 +6,22 @@ interface ProjectMemberIdRow {
   project_id: string;
 }
 
+const PROJECT_QUERY_TIMEOUT_MS = 12000;
+
+function withTimeout<T>(promise: PromiseLike<T>, label: string, timeoutMs = PROJECT_QUERY_TIMEOUT_MS): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`Timeout ao carregar projetos (${label})`)), timeoutMs);
+    Promise.resolve(promise)
+      .then((value) => {
+        clearTimeout(t);
+        resolve(value);
+      }, (error: any) => {
+        clearTimeout(t);
+        reject(error);
+      });
+  });
+}
+
 export async function createProject(name: string, userId: string): Promise<Project> {
   const inviteCode = generateInviteCode();
 
@@ -54,20 +70,51 @@ export async function joinProject(inviteCode: string, userId: string): Promise<P
 }
 
 export async function getUserProjects(userId: string): Promise<Project[]> {
-  const { data: members, error: membersError } = await supabase
-    .from('project_members')
-    .select('project_id')
-    .eq('user_id', userId);
+  const membersStartedAt = Date.now();
+  const { data: members, error: membersError } = await withTimeout<{
+    data: ProjectMemberIdRow[] | null;
+    error: any;
+  }>(
+    supabase
+      .from('project_members')
+      .select('project_id')
+      .eq('user_id', userId) as PromiseLike<{ data: ProjectMemberIdRow[] | null; error: any }>,
+    'project_members',
+  );
 
+  if (__DEV__) {
+    console.log('[projects] project_members settled', {
+      userId,
+      elapsedMs: Date.now() - membersStartedAt,
+      count: members?.length ?? 0,
+      hasError: !!membersError,
+    });
+  }
   if (membersError) throw membersError;
 
-  const ids = [...new Set((members ?? []).map((m) => (m as ProjectMemberIdRow).project_id))];
+  const ids = [...new Set((members ?? []).map((m) => m.project_id))];
   if (ids.length === 0) return [];
 
-  const { data: projects, error: projectsError } = await supabase
-    .from('projects')
-    .select('*')
-    .in('id', ids);
+  const projectsStartedAt = Date.now();
+  const { data: projects, error: projectsError } = await withTimeout<{
+    data: Project[] | null;
+    error: any;
+  }>(
+    supabase
+      .from('projects')
+      .select('*')
+      .in('id', ids) as PromiseLike<{ data: Project[] | null; error: any }>,
+    'projects',
+  );
+  if (__DEV__) {
+    console.log('[projects] projects settled', {
+      userId,
+      idsCount: ids.length,
+      elapsedMs: Date.now() - projectsStartedAt,
+      resultCount: projects?.length ?? 0,
+      hasError: !!projectsError,
+    });
+  }
 
   if (projectsError) throw projectsError;
   return (projects ?? []) as Project[];

@@ -15,10 +15,11 @@ type ProjectUpdates = Partial<Pick<Project, 'name' | 'description' | 'total_budg
 
 export function useProjects() {
   const userId = useAuthStore((s) => s.user?.id);
+  const authReady = useAuthStore((s) => !s.isLoading);
   return useQuery({
     queryKey: ['projects', userId],
     queryFn: () => getUserProjects(userId!),
-    enabled: !!userId,
+    enabled: authReady && !!userId,
     retry: false,
     retryOnMount: false,
   });

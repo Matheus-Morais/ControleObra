@@ -1,14 +1,14 @@
-import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   TextInput,
+  Modal,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import BottomSheet from '@gorhom/bottom-sheet';
 import { useItems, useCreateItem, useDeleteItem, useUpdateItemStatus } from '../../../../../hooks/useItems';
 import { useRooms } from '../../../../../hooks/useRooms';
 import { useProjectStore } from '../../../../../stores/projectStore';
@@ -69,8 +69,7 @@ export default function RoomItemsScreen() {
   const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [categorySearch, setCategorySearch] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
-  const categorySheetRef = useRef<BottomSheet>(null);
-  const categorySheetPoints = useMemo(() => ['60%', '85%'], []);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
 
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   useEffect(() => {
@@ -121,11 +120,11 @@ export default function RoomItemsScreen() {
   }, [newItemName, newItemCategory, projectId, roomId, user]);
 
   const openCategorySheet = useCallback(() => {
-    categorySheetRef.current?.snapToIndex(0);
+    setShowCategoryModal(true);
   }, []);
 
   const closeCategorySheet = useCallback(() => {
-    categorySheetRef.current?.close();
+    setShowCategoryModal(false);
   }, []);
 
   const handleSelectCategory = useCallback(
@@ -334,100 +333,114 @@ export default function RoomItemsScreen() {
         <FAB onPress={() => setShowAddForm(true)} />
       )}
 
-      <BottomSheet
-        ref={categorySheetRef}
-        index={-1}
-        snapPoints={categorySheetPoints}
-        enablePanDownToClose
-        backgroundStyle={{ backgroundColor: '#FAFAF8' }}
-        handleIndicatorStyle={{ backgroundColor: '#D6CDB9' }}
+      <Modal
+        visible={showCategoryModal}
+        transparent
+        animationType="slide"
+        onRequestClose={closeCategorySheet}
       >
-        <View style={{ flex: 1, paddingHorizontal: 16, paddingTop: 4, paddingBottom: 16 }}>
-          <Text style={{ fontSize: 16, fontWeight: '600', color: '#33291E', marginBottom: 12 }}>
-            Selecionar categoria
-          </Text>
-
-          <TextInput
-            value={categorySearch}
-            onChangeText={setCategorySearch}
-            placeholder="Pesquisar categoria"
-            placeholderTextColor="#9CA3AF"
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'flex-end' }}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closeCategorySheet} />
+          <View
             style={{
-              borderWidth: 1,
-              borderColor: '#D6CDB9',
-              borderRadius: 10,
-              paddingHorizontal: 12,
-              paddingVertical: 10,
-              marginBottom: 10,
-              color: '#33291E',
-              fontSize: 14,
-              backgroundColor: '#fff',
+              backgroundColor: '#FAFAF8',
+              borderTopLeftRadius: 16,
+              borderTopRightRadius: 16,
+              paddingHorizontal: 16,
+              paddingTop: 12,
+              paddingBottom: 24,
+              maxHeight: '85%',
             }}
-          />
-
-          <ScrollView style={{ maxHeight: 220 }} contentContainerStyle={{ paddingBottom: 8 }}>
-            {filteredCategories.map((cat) => (
-              <TouchableOpacity
-                key={cat}
-                onPress={() => handleSelectCategory(cat)}
-                style={{
-                  paddingVertical: 10,
-                  paddingHorizontal: 12,
-                  borderRadius: 10,
-                  marginBottom: 6,
-                  backgroundColor: newItemCategory === cat ? '#DDE9D8' : '#FFFFFF',
-                  borderWidth: 1,
-                  borderColor: newItemCategory === cat ? '#5B7553' : '#EDE5D6',
-                }}
-              >
-                <Text style={{ color: '#33291E', fontWeight: '500', fontSize: 14 }}>{cat}</Text>
-              </TouchableOpacity>
-            ))}
-            {filteredCategories.length === 0 && (
-              <Text style={{ color: '#8B7355', fontSize: 13, textAlign: 'center', marginVertical: 12 }}>
-                Nenhuma categoria encontrada.
-              </Text>
-            )}
-          </ScrollView>
-
-          <View style={{ marginTop: 8 }}>
-            <Text style={{ color: '#33291E', fontWeight: '600', fontSize: 13, marginBottom: 6 }}>
-              Adicionar categoria
+          >
+            <View style={{ alignItems: 'center', marginBottom: 8 }}>
+              <View style={{ width: 44, height: 4, borderRadius: 2, backgroundColor: '#D6CDB9' }} />
+            </View>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: '#33291E', marginBottom: 12 }}>
+              Selecionar categoria
             </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <TextInput
-                value={newCategoryName}
-                onChangeText={setNewCategoryName}
-                placeholder="Nova categoria"
-                placeholderTextColor="#9CA3AF"
-                style={{
-                  flex: 1,
-                  borderWidth: 1,
-                  borderColor: '#D6CDB9',
-                  borderRadius: 10,
-                  paddingHorizontal: 12,
-                  paddingVertical: 10,
-                  color: '#33291E',
-                  fontSize: 14,
-                  backgroundColor: '#fff',
-                }}
-              />
-              <TouchableOpacity
-                onPress={handleAddCustomCategory}
-                disabled={!newCategoryName.trim()}
-                style={{
-                  paddingHorizontal: 12,
-                  paddingVertical: 10,
-                  borderRadius: 10,
-                  backgroundColor: newCategoryName.trim() ? '#B85C38' : '#D6CDB9',
-                }}
-              >
-                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Adicionar</Text>
-              </TouchableOpacity>
+
+            <TextInput
+              value={categorySearch}
+              onChangeText={setCategorySearch}
+              placeholder="Pesquisar categoria"
+              placeholderTextColor="#9CA3AF"
+              style={{
+                borderWidth: 1,
+                borderColor: '#D6CDB9',
+                borderRadius: 10,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                marginBottom: 10,
+                color: '#33291E',
+                fontSize: 14,
+                backgroundColor: '#fff',
+              }}
+            />
+
+            <ScrollView style={{ maxHeight: 220 }} contentContainerStyle={{ paddingBottom: 8 }}>
+              {filteredCategories.map((cat) => (
+                <TouchableOpacity
+                  key={cat}
+                  onPress={() => handleSelectCategory(cat)}
+                  style={{
+                    paddingVertical: 10,
+                    paddingHorizontal: 12,
+                    borderRadius: 10,
+                    marginBottom: 6,
+                    backgroundColor: newItemCategory === cat ? '#DDE9D8' : '#FFFFFF',
+                    borderWidth: 1,
+                    borderColor: newItemCategory === cat ? '#5B7553' : '#EDE5D6',
+                  }}
+                >
+                  <Text style={{ color: '#33291E', fontWeight: '500', fontSize: 14 }}>{cat}</Text>
+                </TouchableOpacity>
+              ))}
+              {filteredCategories.length === 0 && (
+                <Text style={{ color: '#8B7355', fontSize: 13, textAlign: 'center', marginVertical: 12 }}>
+                  Nenhuma categoria encontrada.
+                </Text>
+              )}
+            </ScrollView>
+
+            <View style={{ marginTop: 8 }}>
+              <Text style={{ color: '#33291E', fontWeight: '600', fontSize: 13, marginBottom: 6 }}>
+                Adicionar categoria
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <TextInput
+                  value={newCategoryName}
+                  onChangeText={setNewCategoryName}
+                  placeholder="Nova categoria"
+                  placeholderTextColor="#9CA3AF"
+                  style={{
+                    flex: 1,
+                    borderWidth: 1,
+                    borderColor: '#D6CDB9',
+                    borderRadius: 10,
+                    paddingHorizontal: 12,
+                    paddingVertical: 10,
+                    color: '#33291E',
+                    fontSize: 14,
+                    backgroundColor: '#fff',
+                  }}
+                />
+                <TouchableOpacity
+                  onPress={handleAddCustomCategory}
+                  disabled={!newCategoryName.trim()}
+                  style={{
+                    paddingHorizontal: 12,
+                    paddingVertical: 10,
+                    borderRadius: 10,
+                    backgroundColor: newCategoryName.trim() ? '#B85C38' : '#D6CDB9',
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Adicionar</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>
-      </BottomSheet>
+      </Modal>
     </View>
   );
 }

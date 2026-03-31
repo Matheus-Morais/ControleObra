@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -19,11 +19,13 @@ import { showAlert } from '../utils/alert';
 export default function ProjectSetupScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const authReady = useAuthStore((s) => !s.isLoading);
   const setActiveProject = useProjectStore((s) => s.setActiveProject);
   const {
     data: projects,
     isError,
     isFetching,
+    isFetched,
     status,
     fetchStatus,
     failureCount,
@@ -32,19 +34,38 @@ export default function ProjectSetupScreen() {
   } = useProjects();
   const createProject = useCreateProject();
   const joinProject = useJoinProject();
+  const lastStatusRef = useRef(status);
+  const statusStartRef = useRef(Date.now());
 
   useEffect(() => {
     if (__DEV__) {
+      const now = Date.now();
+      if (lastStatusRef.current !== status) {
+        console.log('[project-setup] projects-status-transition', {
+          from: lastStatusRef.current,
+          to: status,
+          elapsedMs: now - statusStartRef.current,
+          userId: user?.id ?? null,
+        });
+        lastStatusRef.current = status;
+        statusStartRef.current = now;
+      }
+
       console.log('[project-setup] projects-query', {
+        userId: user?.id ?? null,
+        authReady,
         status,
         fetchStatus,
         failureCount,
+        isFetched,
         errorMessage: (error as any)?.message ?? null,
       });
     }
-  }, [status, fetchStatus, failureCount, error]);
+  }, [authReady, status, fetchStatus, failureCount, error, isFetched, user?.id]);
 
-  const isResolvingProjects = !!user?.id && isFetching && projects === undefined;
+  const hasUser = !!user?.id;
+  const hasProjectsData = projects !== undefined;
+  const isResolvingProjects = authReady && hasUser && isFetching && !hasProjectsData;
   const showError = isError;
 
   const [mode, setMode] = useState<'select' | 'create' | 'join'>('select');
@@ -112,7 +133,11 @@ export default function ProjectSetupScreen() {
           </Text>
 
           {/* Projects list -- inline loading, never blocks the page */}
-          {isResolvingProjects ? (
+          {!authReady ? (
+            <Text style={{ color: '#8B7355', fontSize: 14, marginBottom: 16 }}>
+              Preparando autenticação...
+            </Text>
+          ) : isResolvingProjects ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 20, marginBottom: 16 }}>
               <ActivityIndicator size="small" color="#C1694F" />
               <Text style={{ marginLeft: 8, color: '#8B7355', fontSize: 14 }}>Carregando projetos...</Text>
