@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,13 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Modal,
 } from 'react-native';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { showAlert } from '../../../../../../utils/alert';
-import { useItem, useUpdateItem, useUpdateItemStatus } from '../../../../../../hooks/useItems';
+import { useItem, useProjectItems, useUpdateItem, useUpdateItemStatus } from '../../../../../../hooks/useItems';
+import { useRooms } from '../../../../../../hooks/useRooms';
 import {
   useItemOptions,
   useCreateItemOption,
@@ -20,6 +22,7 @@ import {
   useDeleteItemOption,
 } from '../../../../../../hooks/useItemOptions';
 import { useAuthStore } from '../../../../../../stores/authStore';
+import { useProjectStore } from '../../../../../../stores/projectStore';
 import {
   Card,
   Button,
@@ -33,6 +36,7 @@ import { formatCurrency, formatDateTime } from '../../../../../../utils/format';
 import { shareViaWhatsApp } from '../../../../../../utils/share';
 import { pickImage, uploadPhoto } from '../../../../../../services/storage';
 import { addOptionPhoto, type ItemOptionWithPhotos } from '../../../../../../services/itemOptions';
+import { DEFAULT_ROOMS } from '../../../../../../constants/rooms';
 import {
   getComments,
   createComment,
@@ -47,8 +51,16 @@ const STATUSES: { key: ItemStatus; label: string; color: string }[] = [
   { key: 'installed', label: 'Instalado', color: '#10B981' },
 ];
 
+function normalizeLabel(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
 export default function ItemDetailScreen() {
-  const { itemId: itemIdParam } = useLocalSearchParams<{
+  const { itemId: itemIdParam, roomId } = useLocalSearchParams<{
     id: string;
     roomId: string;
     itemId: string;
@@ -56,6 +68,9 @@ export default function ItemDetailScreen() {
   const itemId = Array.isArray(itemIdParam) ? itemIdParam[0] : itemIdParam;
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const activeProject = useProjectStore((s) => s.activeProject);
+  const { data: rooms } = useRooms(activeProject?.id);
+  const { data: projectItems } = useProjectItems(activeProject?.id);
   const { data: item, isLoading, isError } = useItem(itemId);
   const { data: options, refetch: refetchOptions } = useItemOptions(itemId);
   const updateItem = useUpdateItem();
@@ -82,6 +97,43 @@ export default function ItemDetailScreen() {
   const [budgetValue, setBudgetValue] = useState('');
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesValue, setNotesValue] = useState('');
+  const [editingCategory, setEditingCategory] = useState(false);
+  const [categoryValue, setCategoryValue] = useState('');
+  const [categorySearch, setCategorySearch] = useState('');
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+
+  const room = useMemo(
+    () => rooms?.find((r) => r.id === roomId),
+    [rooms, roomId]
+  );
+  const suggestedCategories = useMemo(() => {
+    if (!room?.name) return ['Geral'];
+    const normalizedRoom = normalizeLabel(room.name);
+    const exact = DEFAULT_ROOMS.find((dr) => normalizeLabel(dr.name) === normalizedRoom);
+    if (exact?.categories?.length) return exact.categories;
+    const partial = DEFAULT_ROOMS.find((dr) => {
+      const normalized = normalizeLabel(dr.name);
+      return normalized.includes(normalizedRoom) || normalizedRoom.includes(normalized);
+    });
+    return partial?.categories?.length ? partial.categories : ['Geral'];
+  }, [room?.name]);
+  const projectCategories = useMemo(
+    () =>
+      [...new Set((projectItems ?? []).map((i) => (i.category || '').trim()).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b)),
+    [projectItems]
+  );
+  const availableCategories = useMemo(
+    () => [...new Set([...suggestedCategories, ...projectCategories, ...customCategories])],
+    [suggestedCategories, projectCategories, customCategories]
+  );
+  const filteredSuggestedCategories = useMemo(() => {
+    const term = normalizeLabel(categorySearch);
+    if (!term) return availableCategories;
+    return availableCategories.filter((c) => normalizeLabel(c).includes(term));
+  }, [categorySearch, availableCategories]);
 
   useEffect(() => {
     if (itemId) {
@@ -95,6 +147,7 @@ export default function ItemDetailScreen() {
     if (item) {
       setBudgetValue(String(item.budget || 0));
       setNotesValue(item.notes || '');
+      setCategoryValue(item.category || 'Geral');
     }
   }, [item]);
 
@@ -230,6 +283,34 @@ export default function ItemDetailScreen() {
     }
   }, [itemId, notesValue, updateItem]);
 
+  const handleSaveCategory = useCallback(async () => {
+    if (!itemId) return;
+    const category = categoryValue.trim() || 'Geral';
+    try {
+      await updateItem.mutateAsync({
+        itemId,
+        updates: { category },
+      });
+      setEditingCategory(false);
+      setShowCategoryModal(false);
+      setCategorySearch('');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Erro ao salvar categoria';
+      showAlert('Erro', message);
+    }
+  }, [itemId, categoryValue, updateItem]);
+
+  const handleAddCustomCategory = useCallback(() => {
+    const value = newCategoryName.trim();
+    if (!value) return;
+    const exists = availableCategories.some((cat) => normalizeLabel(cat) === normalizeLabel(value));
+    if (!exists) {
+      setCustomCategories((prev) => [...prev, value]);
+    }
+    setCategoryValue(value);
+    setNewCategoryName('');
+  }, [newCategoryName, availableCategories]);
+
   const handleSendComment = useCallback(async () => {
     if (!newComment.trim() || !itemId || !user) return;
     setLoadingComment(true);
@@ -311,7 +392,18 @@ export default function ItemDetailScreen() {
         <View className="px-4 pt-4">
           <Card>
             <View className="flex-row items-center justify-between mb-3">
-              <Text className="text-sand-500 text-sm">{item.category}</Text>
+              <View className="flex-row items-center">
+                <Text className="text-sand-500 text-sm mr-2">{item.category}</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setEditingCategory(true);
+                    setCategoryValue(item.category || 'Geral');
+                    setShowCategoryModal(true);
+                  }}
+                >
+                  <Feather name="edit-2" size={14} color="#A89270" />
+                </TouchableOpacity>
+              </View>
               <StatusChip status={item.status} />
             </View>
             <Text className="text-sand-900 text-xl font-bold">{item.name}</Text>
@@ -595,6 +687,169 @@ export default function ItemDetailScreen() {
           ))}
         </View>
       </ScrollView>
+
+      <Modal
+        visible={showCategoryModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          setShowCategoryModal(false);
+          setEditingCategory(false);
+          setCategorySearch('');
+          setNewCategoryName('');
+        }}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'flex-end' }}>
+          <TouchableOpacity
+            style={{ flex: 1 }}
+            activeOpacity={1}
+            onPress={() => {
+              setShowCategoryModal(false);
+              setEditingCategory(false);
+              setCategorySearch('');
+              setNewCategoryName('');
+            }}
+          />
+          <View
+            style={{
+              backgroundColor: '#FAFAF8',
+              borderTopLeftRadius: 16,
+              borderTopRightRadius: 16,
+              paddingHorizontal: 16,
+              paddingTop: 12,
+              paddingBottom: 20,
+              maxHeight: '85%',
+            }}
+          >
+            <View style={{ alignItems: 'center', marginBottom: 8 }}>
+              <View style={{ width: 44, height: 4, borderRadius: 2, backgroundColor: '#D6CDB9' }} />
+            </View>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: '#33291E', marginBottom: 12 }}>
+              Editar categoria
+            </Text>
+
+            <TextInput
+              value={categorySearch}
+              onChangeText={setCategorySearch}
+              placeholder="Pesquisar categoria sugerida"
+              placeholderTextColor="#9CA3AF"
+              style={{
+                borderWidth: 1,
+                borderColor: '#D6CDB9',
+                borderRadius: 10,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                marginBottom: 10,
+                color: '#33291E',
+                fontSize: 14,
+                backgroundColor: '#fff',
+              }}
+            />
+
+            <ScrollView style={{ maxHeight: 220 }} contentContainerStyle={{ paddingBottom: 8 }}>
+              {filteredSuggestedCategories.map((category) => (
+                <TouchableOpacity
+                  key={category}
+                  onPress={() => setCategoryValue(category)}
+                  style={{
+                    paddingVertical: 10,
+                    paddingHorizontal: 12,
+                    borderRadius: 10,
+                    marginBottom: 6,
+                    backgroundColor: categoryValue === category ? '#DDE9D8' : '#FFFFFF',
+                    borderWidth: 1,
+                    borderColor: categoryValue === category ? '#5B7553' : '#EDE5D6',
+                  }}
+                >
+                  <Text style={{ color: '#33291E', fontWeight: '500', fontSize: 14 }}>{category}</Text>
+                </TouchableOpacity>
+              ))}
+              {filteredSuggestedCategories.length === 0 && (
+                <Text style={{ color: '#8B7355', fontSize: 13, textAlign: 'center', marginVertical: 12 }}>
+                  Nenhuma categoria sugerida encontrada.
+                </Text>
+              )}
+            </ScrollView>
+
+            <Text style={{ color: '#33291E', fontWeight: '600', fontSize: 13, marginBottom: 6, marginTop: 4 }}>
+              Categoria selecionada
+            </Text>
+            <TextInput
+              value={categoryValue}
+              onChangeText={setCategoryValue}
+              placeholder="Digite uma categoria"
+              placeholderTextColor="#9CA3AF"
+              style={{
+                borderWidth: 1,
+                borderColor: '#D6CDB9',
+                borderRadius: 10,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                color: '#33291E',
+                fontSize: 14,
+                backgroundColor: '#fff',
+                marginBottom: 12,
+              }}
+            />
+
+            <Text style={{ color: '#33291E', fontWeight: '600', fontSize: 13, marginBottom: 6 }}>
+              Criar nova categoria
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <TextInput
+                value={newCategoryName}
+                onChangeText={setNewCategoryName}
+                placeholder="Nova categoria"
+                placeholderTextColor="#9CA3AF"
+                style={{
+                  flex: 1,
+                  borderWidth: 1,
+                  borderColor: '#D6CDB9',
+                  borderRadius: 10,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  color: '#33291E',
+                  fontSize: 14,
+                  backgroundColor: '#fff',
+                }}
+              />
+              <TouchableOpacity
+                onPress={handleAddCustomCategory}
+                disabled={!newCategoryName.trim()}
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  borderRadius: 10,
+                  backgroundColor: newCategoryName.trim() ? '#B85C38' : '#D6CDB9',
+                }}
+              >
+                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Adicionar</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Button
+                title="Cancelar"
+                onPress={() => {
+                  setShowCategoryModal(false);
+                  setEditingCategory(false);
+                  setCategorySearch('');
+                }}
+                variant="ghost"
+                size="sm"
+                className="flex-1"
+              />
+              <Button
+                title="Salvar"
+                onPress={handleSaveCategory}
+                size="sm"
+                className="flex-1"
+                loading={updateItem.isPending && editingCategory}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Comment input */}
       <View className="px-4 py-3 bg-white border-t border-sand-100">

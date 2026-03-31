@@ -33,6 +33,7 @@ export default function FinancialScreen() {
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
 
   const loadData = useCallback(async () => {
     if (!activeProject) {
@@ -60,8 +61,9 @@ export default function FinancialScreen() {
     loadData();
   }, [loadData]);
 
-  const { totalBudget, roomBreakdown } = useMemo(() => {
+  const { totalBudget, roomBreakdown, categoryBreakdown } = useMemo(() => {
     const list = items ?? [];
+    const roomNameById = new Map((rooms ?? []).map((r) => [r.id, r.name]));
     const total = list.reduce((s, i) => s + Number(i.budget || 0), 0);
     const breakdown =
       rooms
@@ -72,7 +74,33 @@ export default function FinancialScreen() {
           return { name: room.name, color: room.color, budget, spent };
         })
         .filter((r) => r.budget > 0) ?? [];
-    return { totalBudget: total, roomBreakdown: breakdown };
+    const categoryMap = new Map<
+      string,
+      { category: string; planned: number; spent: number; items: { id: string; name: string; roomName: string; planned: number; spent: number }[] }
+    >();
+    for (const item of list) {
+      const category = (item.category || 'Geral').trim() || 'Geral';
+      const planned = Number(item.budget || 0);
+      const spent = Number(item.actual_price || 0);
+      const current = categoryMap.get(category) ?? { category, planned: 0, spent: 0, items: [] };
+      current.planned += planned;
+      current.spent += spent;
+      current.items.push({
+        id: item.id,
+        name: item.name,
+        roomName: roomNameById.get(item.room_id) ?? 'Cômodo não encontrado',
+        planned,
+        spent,
+      });
+      categoryMap.set(category, current);
+    }
+    const byCategory = [...categoryMap.values()]
+      .map((c) => ({
+        ...c,
+        items: c.items.sort((a, b) => b.planned - a.planned),
+      }))
+      .sort((a, b) => b.planned - a.planned);
+    return { totalBudget: total, roomBreakdown: breakdown, categoryBreakdown: byCategory };
   }, [items, rooms]);
 
   const handleAddTransaction = useCallback(async () => {
@@ -277,6 +305,65 @@ export default function FinancialScreen() {
                 </View>
               </Card>
             ))}
+          </View>
+        )}
+
+        {/* Category breakdown */}
+        {categoryBreakdown.length > 0 && (
+          <View className="mb-6">
+            <Text className="text-sand-900 font-bold text-base mb-3">Por Categoria</Text>
+            {categoryBreakdown.map((group) => {
+              const isExpanded = !!expandedCategories[group.category];
+              return (
+                <Card key={group.category} className="mb-2">
+                  <TouchableOpacity
+                    onPress={() =>
+                      setExpandedCategories((prev) => ({
+                        ...prev,
+                        [group.category]: !prev[group.category],
+                      }))
+                    }
+                    className="flex-row items-center justify-between"
+                  >
+                    <View className="flex-1 pr-2">
+                      <Text className="text-sand-900 text-sm font-semibold">{group.category}</Text>
+                      <Text className="text-sand-500 text-xs mt-0.5">
+                        {group.items.length} {group.items.length === 1 ? 'item' : 'itens'}
+                      </Text>
+                    </View>
+                    <View className="items-end mr-2">
+                      <Text className="text-sand-900 text-sm font-semibold">
+                        Planejado: {formatCurrency(group.planned)}
+                      </Text>
+                      <Text className="text-sand-500 text-xs mt-0.5">
+                        Gasto: {formatCurrency(group.spent)}
+                      </Text>
+                    </View>
+                    <Feather
+                      name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                      size={18}
+                      color="#8B7355"
+                    />
+                  </TouchableOpacity>
+
+                  {isExpanded && (
+                    <View className="mt-3 pt-3 border-t border-sand-100">
+                      {group.items.map((item) => (
+                        <View key={item.id} className="mb-2">
+                          <Text className="text-sand-800 text-sm font-medium">{item.name}</Text>
+                          <Text className="text-sand-500 text-xs">
+                            Cômodo: {item.roomName}
+                          </Text>
+                          <Text className="text-sand-500 text-xs">
+                            Planejado: {formatCurrency(item.planned)} · Gasto: {formatCurrency(item.spent)}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </Card>
+              );
+            })}
           </View>
         )}
 
