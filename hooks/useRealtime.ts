@@ -19,8 +19,9 @@ export function useRealtimeSubscription(projectId: string | undefined) {
         queryClient.invalidateQueries({ queryKey: ['project-items', projectId] });
         queryClient.invalidateQueries({ queryKey: ['rooms', projectId] });
         queryClient.invalidateQueries({ queryKey: ['item-options'] });
-        queryClient.invalidateQueries({ queryKey: ['item-comments'] });
+        queryClient.invalidateQueries({ queryKey: ['comments'] });
         queryClient.invalidateQueries({ queryKey: ['transactions', projectId] });
+        queryClient.invalidateQueries({ queryKey: ['total-spent', projectId] });
       }, DEBOUNCE_MS);
     };
 

@@ -37,11 +37,7 @@ import { shareViaWhatsApp } from '../../../../../../utils/share';
 import { pickImage, uploadPhoto } from '../../../../../../services/storage';
 import { addOptionPhoto, type ItemOptionWithPhotos } from '../../../../../../services/itemOptions';
 import { DEFAULT_ROOMS } from '../../../../../../constants/rooms';
-import {
-  getComments,
-  createComment,
-  type ItemCommentWithProfile,
-} from '../../../../../../services/comments';
+import { useComments, useCreateComment } from '../../../../../../hooks/useComments';
 import type { ItemStatus } from '../../../../../../types';
 
 const STATUSES: { key: ItemStatus; label: string; color: string }[] = [
@@ -79,6 +75,9 @@ export default function ItemDetailScreen() {
   const chooseOption = useChooseOption();
   const deleteOption = useDeleteItemOption();
 
+  const { data: comments = [] } = useComments(itemId);
+  const createCommentMutation = useCreateComment(itemId);
+
   const [showOptionForm, setShowOptionForm] = useState(false);
   const [optionName, setOptionName] = useState('');
   const [optionBrand, setOptionBrand] = useState('');
@@ -89,9 +88,7 @@ export default function ItemDetailScreen() {
   const [optionRating, setOptionRating] = useState(0);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
-  const [comments, setComments] = useState<ItemCommentWithProfile[]>([]);
   const [newComment, setNewComment] = useState('');
-  const [loadingComment, setLoadingComment] = useState(false);
 
   const [editingBudget, setEditingBudget] = useState(false);
   const [budgetValue, setBudgetValue] = useState('');
@@ -134,14 +131,6 @@ export default function ItemDetailScreen() {
     if (!term) return availableCategories;
     return availableCategories.filter((c) => normalizeLabel(c).includes(term));
   }, [categorySearch, availableCategories]);
-
-  useEffect(() => {
-    if (itemId) {
-      getComments(itemId).then(setComments).catch((err) => {
-        console.warn('Erro ao carregar comentários:', err?.message);
-      });
-    }
-  }, [itemId]);
 
   useEffect(() => {
     if (item) {
@@ -313,19 +302,14 @@ export default function ItemDetailScreen() {
 
   const handleSendComment = useCallback(async () => {
     if (!newComment.trim() || !itemId || !user) return;
-    setLoadingComment(true);
     try {
-      await createComment(itemId, user.id, newComment.trim());
+      await createCommentMutation.mutateAsync({ userId: user.id, message: newComment.trim() });
       setNewComment('');
-      const updated = await getComments(itemId);
-      setComments(updated);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Erro ao enviar comentário';
       showAlert('Erro', message);
-    } finally {
-      setLoadingComment(false);
     }
-  }, [newComment, itemId, user]);
+  }, [newComment, itemId, user, createCommentMutation]);
 
   const handleShare = useCallback(
     (option: ItemOptionWithPhotos) => {
@@ -872,9 +856,9 @@ export default function ItemDetailScreen() {
           />
           <TouchableOpacity
             onPress={handleSendComment}
-            disabled={loadingComment || !newComment.trim()}
+            disabled={createCommentMutation.isPending || !newComment.trim()}
             className="bg-terracotta-500 w-10 h-10 rounded-full items-center justify-center"
-            style={{ opacity: loadingComment || !newComment.trim() ? 0.5 : 1 }}
+            style={{ opacity: createCommentMutation.isPending || !newComment.trim() ? 0.5 : 1 }}
           >
             <Feather name="send" size={18} color="#fff" />
           </TouchableOpacity>

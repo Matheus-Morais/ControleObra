@@ -1,10 +1,11 @@
-import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Keyboard } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useProjectStore } from '../../stores/projectStore';
 import { useRooms, useCreateRoom, useUpdateRoom, useDeleteRoom } from '../../hooks/useRooms';
 import { useProjectItems } from '../../hooks/useItems';
+import { useLoadingTimeout } from '../../hooks/useLoadingTimeout';
 import { Card, ProgressBar, FAB, EmptyState, LoadingScreen, Button } from '../../components/ui';
 import { DEFAULT_ROOMS } from '../../constants/rooms';
 import { formatCurrency, formatPercentage } from '../../utils/format';
@@ -57,16 +58,7 @@ export default function RoomsScreen() {
   const [editName, setEditName] = useState('');
   const [actionRoom, setActionRoom] = useState<Room | null>(null);
   const inputRef = useRef<TextInput>(null);
-  const [loadingTimeout, setLoadingTimeout] = useState(false);
-
-  useEffect(() => {
-    if (!roomsLoading) {
-      setLoadingTimeout(false);
-      return;
-    }
-    const t = setTimeout(() => setLoadingTimeout(true), 15000);
-    return () => clearTimeout(t);
-  }, [roomsLoading]);
+  const loadingTimeout = useLoadingTimeout(roomsLoading);
 
   const progressByRoomId = useMemo(() => buildProgressByRoomId(items), [items]);
 
@@ -192,7 +184,7 @@ export default function RoomsScreen() {
           {loadingTimeout ? 'Conexão lenta' : 'Erro ao carregar cômodos'}
         </Text>
         <Text className="text-sand-500 text-sm text-center mb-6">Verifique sua conexão e tente novamente</Text>
-        <Button title="Tentar novamente" onPress={() => { setLoadingTimeout(false); refetchRooms(); }} size="sm" />
+        <Button title="Tentar novamente" onPress={() => refetchRooms()} size="sm" />
       </View>
     );
   }

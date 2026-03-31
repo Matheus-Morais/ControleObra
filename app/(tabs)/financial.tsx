@@ -1,19 +1,15 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useProjectStore } from '../../stores/projectStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useProjectItems } from '../../hooks/useItems';
 import { useRooms } from '../../hooks/useRooms';
+import { useTransactions, useProjectTotalSpent, useCreateTransaction, useDeleteTransaction } from '../../hooks/useTransactions';
+import { useLoadingTimeout } from '../../hooks/useLoadingTimeout';
 import { Card, Button, Input, EmptyState, ProgressBar, LoadingScreen } from '../../components/ui';
 import { formatCurrency, formatDate, formatPercentage } from '../../utils/format';
 import { showAlert } from '../../utils/alert';
-import {
-  getTransactions,
-  createTransaction,
-  deleteTransaction,
-  getProjectTotalSpent,
-} from '../../services/transactions';
 import type { Transaction } from '../../types';
 import { Platform } from 'react-native';
 import * as Print from 'expo-print';
@@ -24,42 +20,23 @@ export default function FinancialScreen() {
   const user = useAuthStore((s) => s.user);
   const { data: items } = useProjectItems(activeProject?.id);
   const { data: rooms } = useRooms(activeProject?.id);
+  const {
+    data: transactions = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useTransactions(activeProject?.id);
+  const { data: totalSpent = 0 } = useProjectTotalSpent(activeProject?.id);
+  const createTx = useCreateTransaction();
+  const deleteTx = useDeleteTransaction(activeProject?.id);
 
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [totalSpent, setTotalSpent] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
+  const loadingTimeout = useLoadingTimeout(isLoading);
+
   const [showAddForm, setShowAddForm] = useState(false);
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
-
-  const loadData = useCallback(async () => {
-    if (!activeProject) {
-      setLoading(false);
-      return;
-    }
-    setLoadError(false);
-    setLoading(true);
-    try {
-      const [txns, spent] = await Promise.all([
-        getTransactions(activeProject.id),
-        getProjectTotalSpent(activeProject.id),
-      ]);
-      setTransactions(txns);
-      setTotalSpent(spent);
-    } catch (error: any) {
-      setLoadError(true);
-      showAlert('Erro', error?.message ?? 'Não foi possível carregar os dados financeiros');
-    } finally {
-      setLoading(false);
-    }
-  }, [activeProject]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
 
   const { totalBudget, roomBreakdown, categoryBreakdown } = useMemo(() => {
     const list = items ?? [];
@@ -106,7 +83,7 @@ export default function FinancialScreen() {
   const handleAddTransaction = useCallback(async () => {
     if (!amount.trim() || !activeProject) return;
     try {
-      await createTransaction({
+      await createTx.mutateAsync({
         project_id: activeProject.id,
         item_id: null,
         amount: parseFloat(amount),
@@ -119,11 +96,10 @@ export default function FinancialScreen() {
       setDescription('');
       setNotes('');
       setShowAddForm(false);
-      loadData();
     } catch (error: any) {
       showAlert('Erro', error.message);
     }
-  }, [amount, description, notes, activeProject, user]);
+  }, [amount, description, notes, activeProject, user, createTx]);
 
   const handleDeleteTransaction = useCallback(
     (txnId: string) => {
@@ -132,52 +108,21 @@ export default function FinancialScreen() {
         {
           text: 'Remover',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteTransaction(txnId);
-              loadData();
-            } catch (error: any) {
-              showAlert('Erro', error?.message ?? 'Não foi possível remover o pagamento');
-            }
+          onPress: () => {
+            deleteTx.mutate(txnId, {
+              onError: (error: any) => {
+                showAlert('Erro', error?.message ?? 'Não foi possível remover o pagamento');
+              },
+            });
           },
         },
       ]);
     },
-    [loadData]
+    [deleteTx]
   );
 
   const handleExportPDF = useCallback(async () => {
     if (!activeProject) return;
-
-    if (Platform.OS === 'web') {
-      const html = `<html><head><style>
-        body { font-family: sans-serif; padding: 20px; }
-        h1 { color: #C1694F; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #F5F0E8; }
-        .total { font-weight: bold; font-size: 18px; }
-      </style></head><body>
-        <h1>ControleObra - ${activeProject.name}</h1>
-        <p>Relatório gerado em ${formatDate(new Date().toISOString())}</p>
-        <h2>Resumo</h2>
-        <p class="total">Orçamento: R$ ${totalBudget.toFixed(2)}</p>
-        <p class="total">Gasto: R$ ${totalSpent.toFixed(2)}</p>
-        <h2>Por Cômodo</h2>
-        <table>
-          <tr><th>Cômodo</th><th>Orçamento</th><th>Gasto</th></tr>
-          ${roomBreakdown.map((r) => `<tr><td>${r.name}</td><td>R$ ${r.budget.toFixed(2)}</td><td>R$ ${r.spent.toFixed(2)}</td></tr>`).join('')}
-        </table>
-        <h2>Pagamentos</h2>
-        <table>
-          <tr><th>Data</th><th>Descrição</th><th>Valor</th></tr>
-          ${transactions.map((t) => `<tr><td>${formatDate(t.paid_at)}</td><td>${t.description ?? '-'}</td><td>R$ ${Number(t.amount).toFixed(2)}</td></tr>`).join('')}
-        </table>
-      </body></html>`;
-      const w = window.open('', '_blank');
-      if (w) { w.document.write(html); w.document.close(); w.print(); }
-      return;
-    }
 
     const html = `<html><head><style>
       body { font-family: sans-serif; padding: 20px; }
@@ -204,6 +149,12 @@ export default function FinancialScreen() {
       </table>
     </body></html>`;
 
+    if (Platform.OS === 'web') {
+      const w = window.open('', '_blank');
+      if (w) { w.document.write(html); w.document.close(); w.print(); }
+      return;
+    }
+
     try {
       const { uri } = await Print.printToFileAsync({ html });
       await Sharing.shareAsync(uri);
@@ -216,16 +167,9 @@ export default function FinancialScreen() {
     return <EmptyState icon="dollar-sign" title="Nenhum projeto selecionado" />;
   }
 
-  const [loadingTimeout, setLoadingTimeout] = useState(false);
-  useEffect(() => {
-    if (!loading) { setLoadingTimeout(false); return; }
-    const t = setTimeout(() => setLoadingTimeout(true), 15000);
-    return () => clearTimeout(t);
-  }, [loading]);
+  if (isLoading && !loadingTimeout) return <LoadingScreen />;
 
-  if (loading && !loadingTimeout) return <LoadingScreen />;
-
-  if (loadError || loadingTimeout) {
+  if (isError || loadingTimeout) {
     return (
       <View className="flex-1 items-center justify-center bg-cream p-8">
         <Feather name="alert-circle" size={40} color="#EF4444" />
@@ -233,7 +177,7 @@ export default function FinancialScreen() {
           {loadingTimeout ? 'Conexão lenta' : 'Erro ao carregar dados'}
         </Text>
         <Text className="text-sand-500 text-sm text-center mb-6">Verifique sua conexão e tente novamente</Text>
-        <Button title="Tentar novamente" onPress={() => { setLoadingTimeout(false); loadData(); }} size="sm" />
+        <Button title="Tentar novamente" onPress={() => refetch()} size="sm" />
       </View>
     );
   }
@@ -383,7 +327,7 @@ export default function FinancialScreen() {
             <Input label="Notas" placeholder="Observações opcionais" value={notes} onChangeText={setNotes} />
             <View className="flex-row gap-3">
               <Button title="Cancelar" onPress={() => setShowAddForm(false)} variant="ghost" size="sm" className="flex-1" />
-              <Button title="Registrar" onPress={handleAddTransaction} size="sm" className="flex-1" />
+              <Button title="Registrar" onPress={handleAddTransaction} loading={createTx.isPending} size="sm" className="flex-1" />
             </View>
           </Card>
         )}

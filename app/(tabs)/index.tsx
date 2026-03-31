@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -6,9 +6,10 @@ import { useProjectStore } from '../../stores/projectStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useRooms } from '../../hooks/useRooms';
 import { useProjectItems } from '../../hooks/useItems';
+import { useProjectTotalSpent } from '../../hooks/useTransactions';
+import { useLoadingTimeout } from '../../hooks/useLoadingTimeout';
 import { Card, ProgressBar, EmptyState, LoadingScreen, StatusChip, Button } from '../../components/ui';
 import { formatCurrency, formatPercentage, formatDateTime } from '../../utils/format';
-import { getProjectTotalSpent } from '../../services/transactions';
 import type { Item, ItemStatus } from '../../types';
 
 function StatusSummaryCard({ icon, label, count, color }: { icon: string; label: string; count: number; color: string }) {
@@ -31,23 +32,8 @@ export default function DashboardScreen() {
   const profile = useAuthStore((s) => s.profile);
   const { data: rooms } = useRooms(activeProject?.id);
   const { data: items, isLoading, isError, refetch } = useProjectItems(activeProject?.id);
-  const [totalSpent, setTotalSpent] = useState(0);
-  const [loadingTimeout, setLoadingTimeout] = useState(false);
-
-  useEffect(() => {
-    if (!isLoading) {
-      setLoadingTimeout(false);
-      return;
-    }
-    const t = setTimeout(() => setLoadingTimeout(true), 15000);
-    return () => clearTimeout(t);
-  }, [isLoading]);
-
-  useEffect(() => {
-    if (activeProject) {
-      getProjectTotalSpent(activeProject.id).then(setTotalSpent).catch(() => {});
-    }
-  }, [activeProject]);
+  const { data: totalSpent = 0 } = useProjectTotalSpent(activeProject?.id);
+  const loadingTimeout = useLoadingTimeout(isLoading);
 
   const stats = useMemo(() => {
     if (!items) return { researching: 0, decided: 0, purchased: 0, installed: 0, total: 0, totalBudget: 0 };
@@ -100,7 +86,7 @@ export default function DashboardScreen() {
           {loadingTimeout ? 'Conexão lenta' : 'Erro ao carregar dados'}
         </Text>
         <Text className="text-sand-500 text-sm text-center mb-6">Verifique sua conexão e tente novamente</Text>
-        <Button title="Tentar novamente" onPress={() => { setLoadingTimeout(false); refetch(); }} size="sm" />
+        <Button title="Tentar novamente" onPress={() => refetch()} size="sm" />
       </View>
     );
   }

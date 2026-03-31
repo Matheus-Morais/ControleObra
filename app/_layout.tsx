@@ -1,26 +1,27 @@
 import '../global.css';
 import React, { useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Feather } from '@expo/vector-icons';
 import { supabase } from '../services/supabase';
 import { useAuthStore } from '../stores/authStore';
 import { useProjectStore } from '../stores/projectStore';
 import { getProfile } from '../services/auth';
-import { LoadingScreen } from '../components/ui';
-
-const AUTH_TIMEOUT_MS = 10000;
+import { LoadingScreen, ErrorBoundary } from '../components/ui';
 
 function isAuthError(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
   const e = error as any;
-  const msg = (e.message ?? e.msg ?? '').toLowerCase();
-  const code = e.code ?? e.status ?? 0;
+  const code = Number(e.code ?? e.status ?? 0);
+  if (code === 401 || code === 403) return true;
+  const msg = (e.message ?? '').toLowerCase();
   return (
-    code === 401 || code === 403 ||
-    msg.includes('jwt') || msg.includes('token') ||
-    msg.includes('refresh') || msg.includes('not authenticated') ||
+    msg.includes('jwt expired') ||
+    msg.includes('invalid refresh token') ||
+    msg.includes('not authenticated') ||
     msg.includes('invalid claim')
   );
 }
@@ -29,7 +30,9 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5,
+      gcTime: 1000 * 60 * 10,
       networkMode: 'always',
+      refetchOnWindowFocus: false,
       retry: (failureCount, error) => {
         if (isAuthError(error)) return false;
         return failureCount < 1;
@@ -44,31 +47,11 @@ const queryClient = new QueryClient({
 });
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { session, isLoading } = useAuthStore();
-  const setSession = useAuthStore((s) => s.setSession);
-  const setProfile = useAuthStore((s) => s.setProfile);
-  const setLoading = useAuthStore((s) => s.setLoading);
+  const session = useAuthStore((s) => s.session);
+  const isLoading = useAuthStore((s) => s.isLoading);
+  const authError = useAuthStore((s) => s.authError);
   const segments = useSegments();
   const router = useRouter();
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (isLoading) {
-      timeoutRef.current = setTimeout(() => {
-        console.warn('Auth timeout: encerrando estado de loading após', AUTH_TIMEOUT_MS, 'ms');
-        setLoading(false);
-      }, AUTH_TIMEOUT_MS);
-    } else if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, [isLoading]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -86,18 +69,70 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     return <LoadingScreen />;
   }
 
+  if (authError && !session) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#FAFAF8',
+          padding: 32,
+        }}
+      >
+        <Feather name="wifi-off" size={48} color="#EF4444" />
+        <Text
+          style={{
+            color: '#33291E',
+            fontSize: 18,
+            fontWeight: '600',
+            textAlign: 'center',
+            marginTop: 16,
+            marginBottom: 8,
+          }}
+        >
+          Erro de conexão
+        </Text>
+        <Text
+          style={{
+            color: '#8B7355',
+            fontSize: 14,
+            textAlign: 'center',
+            marginBottom: 24,
+          }}
+        >
+          Não foi possível verificar sua sessão. Verifique sua conexão.
+        </Text>
+        <TouchableOpacity
+          onPress={() => {
+            useAuthStore.getState().setAuthError(null);
+            useAuthStore.getState().setLoading(true);
+            initializeAuth();
+          }}
+          style={{
+            backgroundColor: '#C1694F',
+            paddingHorizontal: 24,
+            paddingVertical: 12,
+            borderRadius: 10,
+          }}
+        >
+          <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>
+            Tentar novamente
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return <>{children}</>;
 }
 
-function forceCleanSession(
-  setSession: (s: null) => void,
-  setProfile: (p: null) => void,
-  setLoading: (l: boolean) => void,
-) {
+function forceCleanSession() {
   supabase.auth.signOut().catch(() => {});
-  setSession(null);
-  setProfile(null);
-  setLoading(false);
+  useAuthStore.getState().setSession(null);
+  useAuthStore.getState().setProfile(null);
+  useAuthStore.getState().setLoading(false);
+  useAuthStore.getState().setAuthError(null);
   useProjectStore.getState().reset();
   queryClient.clear();
 }
@@ -105,76 +140,79 @@ function forceCleanSession(
 queryClient.getQueryCache().config.onError = (error) => {
   if (isAuthError(error)) {
     console.warn('Auth error em query, forçando sign out:', (error as any)?.message);
-    const store = useAuthStore.getState();
-    forceCleanSession(store.setSession, store.setProfile, store.setLoading);
+    forceCleanSession();
   }
 };
 
-export default function RootLayout() {
-  const { setSession, setProfile, setLoading } = useAuthStore();
+async function initializeAuth() {
+  const { setSession, setProfile, setLoading, setAuthError } = useAuthStore.getState();
 
-  useEffect(() => {
-    async function initAuth() {
-      try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
 
-        if (sessionError || !session) {
-          if (sessionError) console.warn('Erro na sessão:', sessionError.message);
-          setSession(null);
-          setLoading(false);
-          return;
-        }
-
-        // Validate token server-side (triggers refresh if expired)
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-        if (userError || !user) {
-          console.warn('Sessão inválida:', userError?.message ?? 'user null');
-          forceCleanSession(setSession, setProfile, setLoading);
-          return;
-        }
-
-        // Session is valid — get the fresh session after potential refresh
-        const { data: { session: freshSession } } = await supabase.auth.getSession();
-        setSession(freshSession ?? session);
-
-        getProfile(user.id)
-          .then(setProfile)
-          .catch((err) => console.warn('Erro ao carregar perfil:', err?.message));
-
-        setLoading(false);
-      } catch (err: any) {
-        console.warn('initAuth falhou:', err?.message);
-        forceCleanSession(setSession, setProfile, setLoading);
-      }
+    if (error) {
+      console.warn('Erro ao restaurar sessão:', error.message);
+      setSession(null);
+      setAuthError(error.message);
+      setLoading(false);
+      return;
     }
 
-    initAuth();
+    if (!session) {
+      setSession(null);
+      setLoading(false);
+      return;
+    }
+
+    setSession(session);
+    setAuthError(null);
+    setLoading(false);
+
+    if (session.user) {
+      getProfile(session.user.id)
+        .then(setProfile)
+        .catch((err) => console.warn('Erro ao carregar perfil:', err?.message));
+    }
+  } catch (err: any) {
+    console.warn('initAuth falhou:', err?.message);
+    setSession(null);
+    setAuthError(err?.message ?? 'Falha na inicialização');
+    setLoading(false);
+  }
+}
+
+export default function RootLayout() {
+  const initDoneRef = useRef(false);
+
+  useEffect(() => {
+    initializeAuth().then(() => {
+      initDoneRef.current = true;
+    });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!initDoneRef.current) return;
+
+      const { setSession, setProfile } = useAuthStore.getState();
+
       if (event === 'TOKEN_REFRESHED' && !session) {
-        forceCleanSession(setSession, setProfile, setLoading);
+        forceCleanSession();
         return;
       }
 
       if (event === 'SIGNED_OUT') {
-        setSession(null);
-        setProfile(null);
-        useProjectStore.getState().reset();
-        queryClient.clear();
+        forceCleanSession();
         return;
       }
 
       setSession(session);
+      useAuthStore.getState().setAuthError(null);
+
       if (session?.user) {
-        try {
-          const profile = await getProfile(session.user.id);
-          setProfile(profile);
-        } catch (err: any) {
-          console.warn('Erro ao atualizar perfil:', err?.message);
-        }
+        getProfile(session.user.id)
+          .then(setProfile)
+          .catch((err) => console.warn('Erro ao atualizar perfil:', err?.message));
       } else {
         setProfile(null);
       }
@@ -186,17 +224,19 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <AuthGuard>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="project-setup" />
-            <Stack.Screen
-              name="project"
-              options={{ headerShown: false }}
-            />
-          </Stack>
-        </AuthGuard>
+        <ErrorBoundary>
+          <AuthGuard>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="project-setup" />
+              <Stack.Screen
+                name="project"
+                options={{ headerShown: false }}
+              />
+            </Stack>
+          </AuthGuard>
+        </ErrorBoundary>
         <StatusBar style="dark" />
       </GestureHandlerRootView>
     </QueryClientProvider>

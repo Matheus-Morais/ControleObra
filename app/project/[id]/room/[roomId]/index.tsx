@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useItems, useCreateItem, useDeleteItem, useUpdateItemStatus, useProjectItems } from '../../../../../hooks/useItems';
 import { useRooms } from '../../../../../hooks/useRooms';
+import { useLoadingTimeout } from '../../../../../hooks/useLoadingTimeout';
 import { useProjectStore } from '../../../../../stores/projectStore';
 import { useAuthStore } from '../../../../../stores/authStore';
 import { Card, StatusChip, FAB, EmptyState, LoadingScreen, Button, Input } from '../../../../../components/ui';
@@ -72,12 +73,7 @@ export default function RoomItemsScreen() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [showCategoryModal, setShowCategoryModal] = useState(false);
 
-  const [loadingTimeout, setLoadingTimeout] = useState(false);
-  useEffect(() => {
-    if (!isLoading) { setLoadingTimeout(false); return; }
-    const t = setTimeout(() => setLoadingTimeout(true), 15000);
-    return () => clearTimeout(t);
-  }, [isLoading]);
+  const loadingTimeout = useLoadingTimeout(isLoading);
 
   const room = rooms?.find((r) => r.id === roomId);
   const categories = useMemo(() => resolveRoomCategories(room?.name), [room?.name]);
@@ -228,7 +224,7 @@ export default function RoomItemsScreen() {
             {loadingTimeout ? 'Conexão lenta' : 'Erro ao carregar itens'}
           </Text>
           <Text className="text-sand-500 text-sm text-center mb-6">Verifique sua conexão e tente novamente</Text>
-          <Button title="Tentar novamente" onPress={() => { setLoadingTimeout(false); refetch(); }} size="sm" />
+          <Button title="Tentar novamente" onPress={() => refetch()} size="sm" />
         </View>
       ) : (
         <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100, flexGrow: 1 }}>

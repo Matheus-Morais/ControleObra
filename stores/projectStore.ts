@@ -1,5 +1,31 @@
+import { Platform } from 'react-native';
 import { create } from 'zustand';
+import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware';
+import * as SecureStore from 'expo-secure-store';
 import type { Project } from '../types';
+
+const storage: StateStorage = {
+  getItem: (key: string) => {
+    if (Platform.OS === 'web') {
+      return localStorage.getItem(key);
+    }
+    return SecureStore.getItemAsync(key);
+  },
+  setItem: (key: string, value: string) => {
+    if (Platform.OS === 'web') {
+      localStorage.setItem(key, value);
+      return;
+    }
+    SecureStore.setItemAsync(key, value);
+  },
+  removeItem: (key: string) => {
+    if (Platform.OS === 'web') {
+      localStorage.removeItem(key);
+      return;
+    }
+    SecureStore.deleteItemAsync(key);
+  },
+};
 
 interface ProjectState {
   activeProject: Project | null;
@@ -12,28 +38,40 @@ interface ProjectState {
   reset: () => void;
 }
 
-export const useProjectStore = create<ProjectState>((set) => ({
-  activeProject: null,
-  projects: [],
-  setActiveProject: (activeProject) => set({ activeProject }),
-  setProjects: (projects) => set({ projects }),
-  addProject: (project) =>
-    set((state) => ({ projects: [...state.projects, project] })),
-  removeProject: (projectId) =>
-    set((state) => ({
-      projects: state.projects.filter((p) => p.id !== projectId),
-      activeProject:
-        state.activeProject?.id === projectId ? null : state.activeProject,
-    })),
-  updateProject: (projectId, updates) =>
-    set((state) => ({
-      projects: state.projects.map((p) =>
-        p.id === projectId ? { ...p, ...updates } : p
-      ),
-      activeProject:
-        state.activeProject?.id === projectId
-          ? { ...state.activeProject, ...updates }
-          : state.activeProject,
-    })),
-  reset: () => set({ activeProject: null, projects: [] }),
-}));
+export const useProjectStore = create<ProjectState>()(
+  persist(
+    (set) => ({
+      activeProject: null,
+      projects: [],
+      setActiveProject: (activeProject) => set({ activeProject }),
+      setProjects: (projects) => set({ projects }),
+      addProject: (project) =>
+        set((state) => ({ projects: [...state.projects, project] })),
+      removeProject: (projectId) =>
+        set((state) => ({
+          projects: state.projects.filter((p) => p.id !== projectId),
+          activeProject:
+            state.activeProject?.id === projectId ? null : state.activeProject,
+        })),
+      updateProject: (projectId, updates) =>
+        set((state) => ({
+          projects: state.projects.map((p) =>
+            p.id === projectId ? { ...p, ...updates } : p
+          ),
+          activeProject:
+            state.activeProject?.id === projectId
+              ? { ...state.activeProject, ...updates }
+              : state.activeProject,
+        })),
+      reset: () => set({ activeProject: null, projects: [] }),
+    }),
+    {
+      name: 'project-store',
+      storage: createJSONStorage(() => storage),
+      partialize: (state) => ({
+        activeProject: state.activeProject,
+        projects: state.projects,
+      }),
+    }
+  )
+);

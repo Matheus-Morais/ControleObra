@@ -7,3 +7,4 @@ export { EmptyState } from './EmptyState';
 export { StarRating } from './StarRating';
 export { FAB } from './FAB';
 export { LoadingScreen } from './LoadingScreen';
+export { ErrorBoundary } from './ErrorBoundary';
