@@ -1,31 +1,42 @@
 import { Platform } from 'react-native';
 import { create } from 'zustand';
-import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware';
 import * as SecureStore from 'expo-secure-store';
 import type { Project } from '../types';
 
-const storage: StateStorage = {
-  getItem: (key: string) => {
+const STORAGE_KEY = 'project-store';
+
+function readStorage(): { activeProject: Project | null; projects: Project[] } | null {
+  try {
     if (Platform.OS === 'web') {
-      return localStorage.getItem(key);
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
     }
-    return SecureStore.getItemAsync(key);
-  },
-  setItem: (key: string, value: string) => {
+  } catch {}
+  return null;
+}
+
+function writeStorage(activeProject: Project | null, projects: Project[]) {
+  try {
+    const data = JSON.stringify({ activeProject, projects });
     if (Platform.OS === 'web') {
-      localStorage.setItem(key, value);
-      return;
+      localStorage.setItem(STORAGE_KEY, data);
+    } else {
+      SecureStore.setItemAsync(STORAGE_KEY, data);
     }
-    SecureStore.setItemAsync(key, value);
-  },
-  removeItem: (key: string) => {
+  } catch {}
+}
+
+function clearStorage() {
+  try {
     if (Platform.OS === 'web') {
-      localStorage.removeItem(key);
-      return;
+      localStorage.removeItem(STORAGE_KEY);
+    } else {
+      SecureStore.deleteItemAsync(STORAGE_KEY);
     }
-    SecureStore.deleteItemAsync(key);
-  },
-};
+  } catch {}
+}
+
+const persisted = readStorage();
 
 interface ProjectState {
   activeProject: Project | null;
@@ -38,40 +49,35 @@ interface ProjectState {
   reset: () => void;
 }
 
-export const useProjectStore = create<ProjectState>()(
-  persist(
-    (set) => ({
-      activeProject: null,
-      projects: [],
-      setActiveProject: (activeProject) => set({ activeProject }),
-      setProjects: (projects) => set({ projects }),
-      addProject: (project) =>
-        set((state) => ({ projects: [...state.projects, project] })),
-      removeProject: (projectId) =>
-        set((state) => ({
-          projects: state.projects.filter((p) => p.id !== projectId),
-          activeProject:
-            state.activeProject?.id === projectId ? null : state.activeProject,
-        })),
-      updateProject: (projectId, updates) =>
-        set((state) => ({
-          projects: state.projects.map((p) =>
-            p.id === projectId ? { ...p, ...updates } : p
-          ),
-          activeProject:
-            state.activeProject?.id === projectId
-              ? { ...state.activeProject, ...updates }
-              : state.activeProject,
-        })),
-      reset: () => set({ activeProject: null, projects: [] }),
-    }),
-    {
-      name: 'project-store',
-      storage: createJSONStorage(() => storage),
-      partialize: (state) => ({
-        activeProject: state.activeProject,
-        projects: state.projects,
-      }),
-    }
-  )
-);
+export const useProjectStore = create<ProjectState>((set) => ({
+  activeProject: persisted?.activeProject ?? null,
+  projects: persisted?.projects ?? [],
+  setActiveProject: (activeProject) => set({ activeProject }),
+  setProjects: (projects) => set({ projects }),
+  addProject: (project) =>
+    set((state) => ({ projects: [...state.projects, project] })),
+  removeProject: (projectId) =>
+    set((state) => ({
+      projects: state.projects.filter((p) => p.id !== projectId),
+      activeProject:
+        state.activeProject?.id === projectId ? null : state.activeProject,
+    })),
+  updateProject: (projectId, updates) =>
+    set((state) => ({
+      projects: state.projects.map((p) =>
+        p.id === projectId ? { ...p, ...updates } : p
+      ),
+      activeProject:
+        state.activeProject?.id === projectId
+          ? { ...state.activeProject, ...updates }
+          : state.activeProject,
+    })),
+  reset: () => {
+    clearStorage();
+    set({ activeProject: null, projects: [] });
+  },
+}));
+
+useProjectStore.subscribe((state) => {
+  writeStorage(state.activeProject, state.projects);
+});
