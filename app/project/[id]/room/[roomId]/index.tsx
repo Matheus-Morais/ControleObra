@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import BottomSheet from '@gorhom/bottom-sheet';
 import { useItems, useCreateItem, useDeleteItem, useUpdateItemStatus } from '../../../../../hooks/useItems';
 import { useRooms } from '../../../../../hooks/useRooms';
 import { useProjectStore } from '../../../../../stores/projectStore';
@@ -26,6 +27,31 @@ const STATUS_FILTERS: { key: ItemStatus | 'all'; label: string }[] = [
   { key: 'installed', label: 'Instalado' },
 ];
 
+function normalizeLabel(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+function resolveRoomCategories(roomName: string | undefined): string[] {
+  const fallback = ['Geral'];
+  if (!roomName) return fallback;
+
+  const normalized = normalizeLabel(roomName);
+  const exact = DEFAULT_ROOMS.find((dr) => normalizeLabel(dr.name) === normalized);
+  if (exact?.categories?.length) return exact.categories;
+
+  const partial = DEFAULT_ROOMS.find((dr) => {
+    const base = normalizeLabel(dr.name);
+    return base.includes(normalized) || normalized.includes(base);
+  });
+  if (partial?.categories?.length) return partial.categories;
+
+  return fallback;
+}
+
 export default function RoomItemsScreen() {
   const { id: projectId, roomId } = useLocalSearchParams<{ id: string; roomId: string }>();
   const router = useRouter();
@@ -40,6 +66,11 @@ export default function RoomItemsScreen() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [newItemCategory, setNewItemCategory] = useState('');
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [categorySearch, setCategorySearch] = useState('');
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const categorySheetRef = useRef<BottomSheet>(null);
+  const categorySheetPoints = useMemo(() => ['60%', '85%'], []);
 
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   useEffect(() => {
@@ -49,8 +80,16 @@ export default function RoomItemsScreen() {
   }, [isLoading]);
 
   const room = rooms?.find((r) => r.id === roomId);
-  const defaultRoom = DEFAULT_ROOMS.find((dr) => dr.name === room?.name);
-  const categories = defaultRoom?.categories ?? [];
+  const categories = useMemo(() => resolveRoomCategories(room?.name), [room?.name]);
+  const availableCategories = useMemo(
+    () => [...new Set([...categories, ...customCategories])],
+    [categories, customCategories]
+  );
+  const filteredCategories = useMemo(() => {
+    const term = normalizeLabel(categorySearch);
+    if (!term) return availableCategories;
+    return availableCategories.filter((cat) => normalizeLabel(cat).includes(term));
+  }, [availableCategories, categorySearch]);
 
   const filteredItems = useMemo(() => {
     if (!items) return [];
@@ -80,6 +119,34 @@ export default function RoomItemsScreen() {
       showAlert('Erro', error.message ?? 'Erro ao adicionar item');
     }
   }, [newItemName, newItemCategory, projectId, roomId, user]);
+
+  const openCategorySheet = useCallback(() => {
+    categorySheetRef.current?.snapToIndex(0);
+  }, []);
+
+  const closeCategorySheet = useCallback(() => {
+    categorySheetRef.current?.close();
+  }, []);
+
+  const handleSelectCategory = useCallback(
+    (category: string) => {
+      setNewItemCategory(category);
+      setCategorySearch('');
+      closeCategorySheet();
+    },
+    [closeCategorySheet]
+  );
+
+  const handleAddCustomCategory = useCallback(() => {
+    const value = newCategoryName.trim();
+    if (!value) return;
+    const exists = availableCategories.some((cat) => normalizeLabel(cat) === normalizeLabel(value));
+    if (!exists) {
+      setCustomCategories((prev) => [...prev, value]);
+    }
+    setNewCategoryName('');
+    handleSelectCategory(value);
+  }, [newCategoryName, availableCategories, handleSelectCategory]);
 
   const handleDeleteItem = useCallback(
     (itemId: string) => {
@@ -181,32 +248,28 @@ export default function RoomItemsScreen() {
                   value={newItemName}
                   onChangeText={setNewItemName}
                 />
-                {categories.length > 0 && (
-                  <View className="mb-3">
-                    <Text className="text-sand-800 font-medium text-sm mb-2">Categoria</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                      {categories.map((cat) => (
-                        <TouchableOpacity
-                          key={cat}
-                          onPress={() => setNewItemCategory(cat)}
-                          className={`px-3 py-1.5 rounded-full mr-2 ${
-                            newItemCategory === cat
-                              ? 'bg-moss-500'
-                              : 'bg-sand-100'
-                          }`}
-                        >
-                          <Text
-                            className={`text-xs font-medium ${
-                              newItemCategory === cat ? 'text-white' : 'text-sand-700'
-                            }`}
-                          >
-                            {cat}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  </View>
-                )}
+                <View className="mb-3">
+                  <Text className="text-sand-800 font-medium text-sm mb-2">Categoria</Text>
+                  <TouchableOpacity
+                    onPress={openCategorySheet}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: '#D6CDB9',
+                      borderRadius: 10,
+                      paddingHorizontal: 12,
+                      paddingVertical: 12,
+                      backgroundColor: '#fff',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <Text style={{ color: newItemCategory ? '#33291E' : '#8B7355', fontSize: 14 }}>
+                      {newItemCategory || 'Selecionar categoria'}
+                    </Text>
+                    <Feather name="chevron-down" size={16} color="#8B7355" />
+                  </TouchableOpacity>
+                </View>
                 <View className="flex-row gap-3">
                   <Button
                     title="Cancelar"
@@ -270,6 +333,101 @@ export default function RoomItemsScreen() {
       {!showAddForm && filteredItems.length > 0 && (
         <FAB onPress={() => setShowAddForm(true)} />
       )}
+
+      <BottomSheet
+        ref={categorySheetRef}
+        index={-1}
+        snapPoints={categorySheetPoints}
+        enablePanDownToClose
+        backgroundStyle={{ backgroundColor: '#FAFAF8' }}
+        handleIndicatorStyle={{ backgroundColor: '#D6CDB9' }}
+      >
+        <View style={{ flex: 1, paddingHorizontal: 16, paddingTop: 4, paddingBottom: 16 }}>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: '#33291E', marginBottom: 12 }}>
+            Selecionar categoria
+          </Text>
+
+          <TextInput
+            value={categorySearch}
+            onChangeText={setCategorySearch}
+            placeholder="Pesquisar categoria"
+            placeholderTextColor="#9CA3AF"
+            style={{
+              borderWidth: 1,
+              borderColor: '#D6CDB9',
+              borderRadius: 10,
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+              marginBottom: 10,
+              color: '#33291E',
+              fontSize: 14,
+              backgroundColor: '#fff',
+            }}
+          />
+
+          <ScrollView style={{ maxHeight: 220 }} contentContainerStyle={{ paddingBottom: 8 }}>
+            {filteredCategories.map((cat) => (
+              <TouchableOpacity
+                key={cat}
+                onPress={() => handleSelectCategory(cat)}
+                style={{
+                  paddingVertical: 10,
+                  paddingHorizontal: 12,
+                  borderRadius: 10,
+                  marginBottom: 6,
+                  backgroundColor: newItemCategory === cat ? '#DDE9D8' : '#FFFFFF',
+                  borderWidth: 1,
+                  borderColor: newItemCategory === cat ? '#5B7553' : '#EDE5D6',
+                }}
+              >
+                <Text style={{ color: '#33291E', fontWeight: '500', fontSize: 14 }}>{cat}</Text>
+              </TouchableOpacity>
+            ))}
+            {filteredCategories.length === 0 && (
+              <Text style={{ color: '#8B7355', fontSize: 13, textAlign: 'center', marginVertical: 12 }}>
+                Nenhuma categoria encontrada.
+              </Text>
+            )}
+          </ScrollView>
+
+          <View style={{ marginTop: 8 }}>
+            <Text style={{ color: '#33291E', fontWeight: '600', fontSize: 13, marginBottom: 6 }}>
+              Adicionar categoria
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <TextInput
+                value={newCategoryName}
+                onChangeText={setNewCategoryName}
+                placeholder="Nova categoria"
+                placeholderTextColor="#9CA3AF"
+                style={{
+                  flex: 1,
+                  borderWidth: 1,
+                  borderColor: '#D6CDB9',
+                  borderRadius: 10,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  color: '#33291E',
+                  fontSize: 14,
+                  backgroundColor: '#fff',
+                }}
+              />
+              <TouchableOpacity
+                onPress={handleAddCustomCategory}
+                disabled={!newCategoryName.trim()}
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  borderRadius: 10,
+                  backgroundColor: newCategoryName.trim() ? '#B85C38' : '#D6CDB9',
+                }}
+              >
+                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Adicionar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </BottomSheet>
     </View>
   );
 }
