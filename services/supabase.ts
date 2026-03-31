@@ -29,13 +29,29 @@ const ExpoSecureStoreAdapter = {
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 
-const FETCH_TIMEOUT_MS = 10000;
+/** Alinhado com timeouts em serviços que usam `Promise.race` com o cliente Supabase. */
+export const FETCH_TIMEOUT_MS = 10000;
 
 const fetchWithTimeout: typeof fetch = (input, init) => {
-  const timeoutPromise = new Promise<Response>((_, reject) => {
-    setTimeout(() => reject(new Error('Request timeout')), FETCH_TIMEOUT_MS);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const externalSignal = init?.signal;
+
+  const onExternalAbort = () => controller.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      controller.abort();
+    } else {
+      externalSignal.addEventListener('abort', onExternalAbort, { once: true });
+    }
+  }
+
+  return fetch(input, { ...init, signal: controller.signal }).finally(() => {
+    clearTimeout(timeoutId);
+    if (externalSignal) {
+      externalSignal.removeEventListener('abort', onExternalAbort);
+    }
   });
-  return Promise.race([fetch(input, init), timeoutPromise]);
 };
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {

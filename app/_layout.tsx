@@ -55,10 +55,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isLoading) {
       timeoutRef.current = setTimeout(() => {
-        console.warn('Auth timeout: forçando sign out após', AUTH_TIMEOUT_MS, 'ms');
-        supabase.auth.signOut().catch(() => {});
-        setSession(null);
-        setProfile(null);
+        console.warn('Auth timeout: encerrando estado de loading após', AUTH_TIMEOUT_MS, 'ms');
         setLoading(false);
       }, AUTH_TIMEOUT_MS);
     } else if (timeoutRef.current) {

@@ -20,22 +20,32 @@ export default function ProjectSetupScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const setActiveProject = useProjectStore((s) => s.setActiveProject);
-  const { data: projects, isLoading, isError, refetch } = useProjects();
+  const {
+    data: projects,
+    isError,
+    isFetching,
+    status,
+    fetchStatus,
+    failureCount,
+    error,
+    refetch,
+  } = useProjects();
   const createProject = useCreateProject();
   const joinProject = useJoinProject();
 
-  const [loadingTimeout, setLoadingTimeout] = useState(false);
-
   useEffect(() => {
-    if (!isLoading) {
-      setLoadingTimeout(false);
-      return;
+    if (__DEV__) {
+      console.log('[project-setup] projects-query', {
+        status,
+        fetchStatus,
+        failureCount,
+        errorMessage: (error as any)?.message ?? null,
+      });
     }
-    const timer = setTimeout(() => setLoadingTimeout(true), 15000);
-    return () => clearTimeout(timer);
-  }, [isLoading]);
+  }, [status, fetchStatus, failureCount, error]);
 
-  const showError = isError || loadingTimeout;
+  const isResolvingProjects = !!user?.id && isFetching && projects === undefined;
+  const showError = isError;
 
   const [mode, setMode] = useState<'select' | 'create' | 'join'>('select');
   const [projectName, setProjectName] = useState('');
@@ -102,7 +112,7 @@ export default function ProjectSetupScreen() {
           </Text>
 
           {/* Projects list -- inline loading, never blocks the page */}
-          {isLoading && !loadingTimeout ? (
+          {isResolvingProjects ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 20, marginBottom: 16 }}>
               <ActivityIndicator size="small" color="#C1694F" />
               <Text style={{ marginLeft: 8, color: '#8B7355', fontSize: 14 }}>Carregando projetos...</Text>
@@ -114,9 +124,9 @@ export default function ProjectSetupScreen() {
             }}>
               <Feather name="alert-circle" size={20} color="#EF4444" />
               <Text style={{ color: '#DC2626', fontSize: 14, marginLeft: 8, flex: 1 }}>
-                {loadingTimeout ? 'Conexão lenta. Tente novamente.' : 'Erro ao carregar projetos.'}
+                Erro ao carregar projetos.
               </Text>
-              <TouchableOpacity onPress={() => { setLoadingTimeout(false); refetch(); }}>
+              <TouchableOpacity onPress={() => { refetch(); }}>
                 <Text style={{ color: '#C1694F', fontWeight: '500', fontSize: 14 }}>Tentar novamente</Text>
               </TouchableOpacity>
             </View>

@@ -2,9 +2,8 @@ import { generateInviteCode } from '../utils/format';
 import type { Profile, Project, ProjectMember } from '../types';
 import { supabase } from './supabase';
 
-interface ProjectMemberRow {
+interface ProjectMemberIdRow {
   project_id: string;
-  projects: Project | null;
 }
 
 export async function createProject(name: string, userId: string): Promise<Project> {
@@ -55,24 +54,23 @@ export async function joinProject(inviteCode: string, userId: string): Promise<P
 }
 
 export async function getUserProjects(userId: string): Promise<Project[]> {
-  const SERVICE_TIMEOUT = 12000;
+  const { data: members, error: membersError } = await supabase
+    .from('project_members')
+    .select('project_id')
+    .eq('user_id', userId);
 
-  const query = async () => {
-    const { data, error } = await supabase
-      .from('project_members')
-      .select('project_id, projects(*)')
-      .eq('user_id', userId);
+  if (membersError) throw membersError;
 
-    if (error) throw error;
-    const rows = (data ?? []) as unknown as ProjectMemberRow[];
-    return rows.map((pm) => pm.projects).filter((p): p is Project => p != null);
-  };
+  const ids = [...new Set((members ?? []).map((m) => (m as ProjectMemberIdRow).project_id))];
+  if (ids.length === 0) return [];
 
-  const timeout = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error('Timeout ao carregar projetos')), SERVICE_TIMEOUT),
-  );
+  const { data: projects, error: projectsError } = await supabase
+    .from('projects')
+    .select('*')
+    .in('id', ids);
 
-  return Promise.race([query(), timeout]);
+  if (projectsError) throw projectsError;
+  return (projects ?? []) as Project[];
 }
 
 export async function getProjectMembers(

@@ -22,13 +22,24 @@ const ROOM_ICONS = [
   'layers', 'square', 'triangle', 'circle', 'hexagon',
 ];
 
-function getRoomProgress(roomId: string, items: Item[]) {
-  const roomItems = items.filter((i) => i.room_id === roomId);
-  const total = roomItems.length;
-  const done = roomItems.filter((i) => i.status === 'purchased' || i.status === 'installed').length;
-  const budget = roomItems.reduce((sum, i) => sum + Number(i.budget || 0), 0);
-  const spent = roomItems.reduce((sum, i) => sum + Number(i.actual_price || 0), 0);
-  return { total, done, budget, spent };
+const EMPTY_ROOM_PROGRESS = { total: 0, done: 0, budget: 0, spent: 0 };
+
+function buildProgressByRoomId(items: Item[]) {
+  const byRoom = new Map<string, Item[]>();
+  for (const i of items) {
+    const list = byRoom.get(i.room_id) ?? [];
+    list.push(i);
+    byRoom.set(i.room_id, list);
+  }
+  const map = new Map<string, { total: number; done: number; budget: number; spent: number }>();
+  for (const [roomId, roomItems] of byRoom) {
+    const total = roomItems.length;
+    const done = roomItems.filter((i) => i.status === 'purchased' || i.status === 'installed').length;
+    const budget = roomItems.reduce((sum, i) => sum + Number(i.budget || 0), 0);
+    const spent = roomItems.reduce((sum, i) => sum + Number(i.actual_price || 0), 0);
+    map.set(roomId, { total, done, budget, spent });
+  }
+  return map;
 }
 
 export default function RoomsScreen() {
@@ -46,6 +57,18 @@ export default function RoomsScreen() {
   const [editName, setEditName] = useState('');
   const [actionRoom, setActionRoom] = useState<Room | null>(null);
   const inputRef = useRef<TextInput>(null);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+
+  useEffect(() => {
+    if (!roomsLoading) {
+      setLoadingTimeout(false);
+      return;
+    }
+    const t = setTimeout(() => setLoadingTimeout(true), 15000);
+    return () => clearTimeout(t);
+  }, [roomsLoading]);
+
+  const progressByRoomId = useMemo(() => buildProgressByRoomId(items), [items]);
 
   const hasRooms = !!rooms && rooms.length > 0;
 
@@ -158,13 +181,6 @@ export default function RoomsScreen() {
   if (!activeProject) {
     return <EmptyState icon="home" title="Nenhum projeto selecionado" description="Selecione ou crie um projeto para começar" />;
   }
-
-  const [loadingTimeout, setLoadingTimeout] = useState(false);
-  useEffect(() => {
-    if (!roomsLoading) { setLoadingTimeout(false); return; }
-    const t = setTimeout(() => setLoadingTimeout(true), 15000);
-    return () => clearTimeout(t);
-  }, [roomsLoading]);
 
   if (roomsLoading && !loadingTimeout) return <LoadingScreen />;
 
@@ -376,7 +392,7 @@ export default function RoomsScreen() {
 
         <View className="flex-row flex-wrap" style={{ gap: 12 }}>
           {rooms.map((room) => {
-            const progress = getRoomProgress(room.id, items);
+            const progress = progressByRoomId.get(room.id) ?? EMPTY_ROOM_PROGRESS;
             const pct = formatPercentage(progress.done, progress.total);
 
             return (

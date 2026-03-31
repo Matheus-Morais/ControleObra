@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState, useRef } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -32,6 +32,16 @@ export default function DashboardScreen() {
   const { data: rooms } = useRooms(activeProject?.id);
   const { data: items, isLoading, isError, refetch } = useProjectItems(activeProject?.id);
   const [totalSpent, setTotalSpent] = useState(0);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setLoadingTimeout(false);
+      return;
+    }
+    const t = setTimeout(() => setLoadingTimeout(true), 15000);
+    return () => clearTimeout(t);
+  }, [isLoading]);
 
   useEffect(() => {
     if (activeProject) {
@@ -79,13 +89,6 @@ export default function DashboardScreen() {
       />
     );
   }
-
-  const [loadingTimeout, setLoadingTimeout] = useState(false);
-  useEffect(() => {
-    if (!isLoading) { setLoadingTimeout(false); return; }
-    const t = setTimeout(() => setLoadingTimeout(true), 15000);
-    return () => clearTimeout(t);
-  }, [isLoading]);
 
   if (isLoading && !loadingTimeout) return <LoadingScreen />;
 

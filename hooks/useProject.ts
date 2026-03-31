@@ -14,12 +14,13 @@ import type { Project } from '../types';
 type ProjectUpdates = Partial<Pick<Project, 'name' | 'description' | 'total_budget'>>;
 
 export function useProjects() {
-  const user = useAuthStore((s) => s.user);
+  const userId = useAuthStore((s) => s.user?.id);
   return useQuery({
-    queryKey: ['projects', user?.id],
-    queryFn: () => getUserProjects(user!.id),
-    enabled: !!user,
-    retry: 1,
+    queryKey: ['projects', userId],
+    queryFn: () => getUserProjects(userId!),
+    enabled: !!userId,
+    retry: false,
+    retryOnMount: false,
   });
 }
 

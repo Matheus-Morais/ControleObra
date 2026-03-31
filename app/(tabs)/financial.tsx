@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useProjectStore } from '../../stores/projectStore';
@@ -60,14 +60,20 @@ export default function FinancialScreen() {
     loadData();
   }, [loadData]);
 
-  const totalBudget = items?.reduce((s, i) => s + Number(i.budget || 0), 0) ?? 0;
-
-  const roomBreakdown = rooms?.map((room) => {
-    const roomItems = (items ?? []).filter((i) => i.room_id === room.id);
-    const budget = roomItems.reduce((s, i) => s + Number(i.budget || 0), 0);
-    const spent = roomItems.reduce((s, i) => s + Number(i.actual_price || 0), 0);
-    return { name: room.name, color: room.color, budget, spent };
-  }).filter((r) => r.budget > 0) ?? [];
+  const { totalBudget, roomBreakdown } = useMemo(() => {
+    const list = items ?? [];
+    const total = list.reduce((s, i) => s + Number(i.budget || 0), 0);
+    const breakdown =
+      rooms
+        ?.map((room) => {
+          const roomItems = list.filter((i) => i.room_id === room.id);
+          const budget = roomItems.reduce((s, i) => s + Number(i.budget || 0), 0);
+          const spent = roomItems.reduce((s, i) => s + Number(i.actual_price || 0), 0);
+          return { name: room.name, color: room.color, budget, spent };
+        })
+        .filter((r) => r.budget > 0) ?? [];
+    return { totalBudget: total, roomBreakdown: breakdown };
+  }, [items, rooms]);
 
   const handleAddTransaction = useCallback(async () => {
     if (!amount.trim() || !activeProject) return;
