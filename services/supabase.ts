@@ -26,8 +26,14 @@ const ExpoSecureStoreAdapter = {
   },
 };
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
+
+if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
+  console.error(
+    'EXPO_PUBLIC_SUPABASE_URL is not set. Configure it in your .env file or Vercel environment variables.'
+  );
+}
 
 /** Alinhado com timeouts em serviços que usam `Promise.race` com o cliente Supabase. */
 export const FETCH_TIMEOUT_MS = 10000;
