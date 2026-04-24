@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../stores/authStore';
 import { useProjectStore } from '../../stores/projectStore';
 import { useUpdateProject } from '../../hooks/useProject';
@@ -11,9 +12,9 @@ import { showAlert } from '../../utils/alert';
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { user, profile } = useAuthStore();
   const { activeProject } = useProjectStore();
-  const reset = useAuthStore((s) => s.reset);
   const resetProject = useProjectStore((s) => s.reset);
   const updateProject = useUpdateProject();
 
@@ -23,9 +24,13 @@ export default function SettingsScreen() {
   async function doSignOut() {
     try {
       await signOut();
-      reset();
+    } catch {
+      // Se falhar no servidor, limpa localmente mesmo assim
+    } finally {
+      useAuthStore.getState().reset();
       resetProject();
-    } catch {}
+      queryClient.clear();
+    }
   }
 
   function handleSignOut() {
@@ -36,6 +41,7 @@ export default function SettingsScreen() {
   }
 
   function handleSwitchProject() {
+    queryClient.clear();
     resetProject();
     router.replace('/project-setup');
   }

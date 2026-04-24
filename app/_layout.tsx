@@ -127,12 +127,11 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function forceCleanSession() {
-  supabase.auth.signOut().catch(() => {});
-  useAuthStore.getState().setSession(null);
-  useAuthStore.getState().setProfile(null);
-  useAuthStore.getState().setLoading(false);
-  useAuthStore.getState().setAuthError(null);
+function forceCleanSession(skipSignOut = false) {
+  if (!skipSignOut) {
+    supabase.auth.signOut().catch(() => {});
+  }
+  useAuthStore.getState().reset();
   useProjectStore.getState().reset();
   queryClient.clear();
 }
@@ -202,7 +201,7 @@ export default function RootLayout() {
       }
 
       if (event === 'SIGNED_OUT') {
-        forceCleanSession();
+        forceCleanSession(true);
         return;
       }
 
