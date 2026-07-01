@@ -7,6 +7,7 @@ import {
   deleteItemOption,
   addOptionPhoto,
   deleteOptionPhoto,
+  type ItemOptionWithPhotos,
 } from '../services/itemOptions';
 import type { ItemOption } from '../types';
 
@@ -56,7 +57,22 @@ export function useChooseOption() {
   return useMutation({
     mutationFn: ({ itemId, optionId }: { itemId: string; optionId: string }) =>
       chooseOption(itemId, optionId),
-    onSuccess: (_, variables) => {
+    // Optimistic: marca a opção como escolhida (e desmarca as demais) na hora.
+    onMutate: async ({ itemId, optionId }) => {
+      const key = ['item-options', itemId];
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<ItemOptionWithPhotos[]>(key);
+      queryClient.setQueryData<ItemOptionWithPhotos[]>(key, (old) =>
+        old?.map((opt) => ({ ...opt, is_chosen: opt.id === optionId }))
+      );
+      return { itemId, previous };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous) {
+        queryClient.setQueryData(['item-options', ctx.itemId], ctx.previous);
+      }
+    },
+    onSettled: (_data, _err, variables) => {
       queryClient.invalidateQueries({ queryKey: ['item-options', variables.itemId] });
       queryClient.invalidateQueries({ queryKey: ['item', variables.itemId] });
     },
