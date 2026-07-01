@@ -1,58 +1,38 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  Modal,
-} from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { showAlert } from '../../../../../../utils/alert';
-import { useItem, useProjectItems, useUpdateItem, useUpdateItemStatus } from '../../../../../../hooks/useItems';
+import { useItem, useProjectItems } from '../../../../../../hooks/useItems';
 import { useRooms } from '../../../../../../hooks/useRooms';
-import {
-  useItemOptions,
-  useCreateItemOption,
-  useChooseOption,
-  useDeleteItemOption,
-} from '../../../../../../hooks/useItemOptions';
-import { useAuthStore } from '../../../../../../stores/authStore';
+import { useItemOptions } from '../../../../../../hooks/useItemOptions';
+import { useComments } from '../../../../../../hooks/useComments';
+import { useCategoryEditor } from '../../../../../../hooks/useCategoryEditor';
+import { useItemActions } from '../../../../../../hooks/useItemActions';
 import { useProjectStore } from '../../../../../../stores/projectStore';
+import { useTheme } from '../../../../../../hooks/useTheme';
+import { LoadingScreen, EmptyState } from '../../../../../../components/ui';
 import {
-  Card,
-  Button,
-  Input,
-  StatusChip,
-  StarRating,
-  LoadingScreen,
-  EmptyState,
-} from '../../../../../../components/ui';
-import { formatCurrency, formatDateTime } from '../../../../../../utils/format';
-import { shareViaWhatsApp } from '../../../../../../utils/share';
-import { pickImage, uploadPhoto } from '../../../../../../services/storage';
-import { addOptionPhoto, type ItemOptionWithPhotos } from '../../../../../../services/itemOptions';
-import { DEFAULT_ROOMS } from '../../../../../../constants/rooms';
-import { useComments, useCreateComment } from '../../../../../../hooks/useComments';
-import type { ItemStatus } from '../../../../../../types';
+  ItemHeaderCard,
+  EditableTextCard,
+  OptionCard,
+  OptionForm,
+  CommentList,
+  CommentComposer,
+  CategoryPickerModal,
+} from '../../../../../../components/item';
+import { formatCurrency } from '../../../../../../utils/format';
 
-const STATUSES: { key: ItemStatus; label: string; color: string }[] = [
-  { key: 'researching', label: 'Pesquisando', color: '#3B82F6' },
-  { key: 'decided', label: 'Decidido', color: '#F59E0B' },
-  { key: 'purchased', label: 'Comprado', color: '#8B5CF6' },
-  { key: 'installed', label: 'Instalado', color: '#10B981' },
-];
-
-function normalizeLabel(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim();
+function BackButton({ onPress, color }: { onPress: () => void; color: string }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      style={{ marginRight: 8, marginLeft: 10, padding: 10 }}
+      accessibilityRole="button"
+      accessibilityLabel="Voltar"
+    >
+      <Feather name="arrow-left" size={24} color={color} />
+    </TouchableOpacity>
+  );
 }
 
 export default function ItemDetailScreen() {
@@ -63,283 +43,44 @@ export default function ItemDetailScreen() {
   }>();
   const itemId = Array.isArray(itemIdParam) ? itemIdParam[0] : itemIdParam;
   const router = useRouter();
-  const user = useAuthStore((s) => s.user);
+  const { colors } = useTheme();
   const activeProject = useProjectStore((s) => s.activeProject);
+
   const { data: rooms } = useRooms(activeProject?.id);
   const { data: projectItems } = useProjectItems(activeProject?.id);
   const { data: item, isLoading, isError } = useItem(itemId);
-  const { data: options, refetch: refetchOptions } = useItemOptions(itemId);
-  const updateItem = useUpdateItem();
-  const updateStatus = useUpdateItemStatus();
-  const createOption = useCreateItemOption();
-  const chooseOption = useChooseOption();
-  const deleteOption = useDeleteItemOption();
-
+  const { data: options } = useItemOptions(itemId);
   const { data: comments = [] } = useComments(itemId);
-  const createCommentMutation = useCreateComment(itemId);
+
+  const actions = useItemActions(itemId, item);
 
   const [showOptionForm, setShowOptionForm] = useState(false);
-  const [optionName, setOptionName] = useState('');
-  const [optionBrand, setOptionBrand] = useState('');
-  const [optionPrice, setOptionPrice] = useState('');
-  const [optionStore, setOptionStore] = useState('');
-  const [optionUrl, setOptionUrl] = useState('');
-  const [optionNotes, setOptionNotes] = useState('');
-  const [optionRating, setOptionRating] = useState(0);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-
   const [newComment, setNewComment] = useState('');
-
   const [editingBudget, setEditingBudget] = useState(false);
   const [budgetValue, setBudgetValue] = useState('');
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesValue, setNotesValue] = useState('');
-  const [editingCategory, setEditingCategory] = useState(false);
-  const [categoryValue, setCategoryValue] = useState('');
-  const [categorySearch, setCategorySearch] = useState('');
-  const [customCategories, setCustomCategories] = useState<string[]>([]);
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [showCategoryModal, setShowCategoryModal] = useState(false);
 
-  const room = useMemo(
-    () => rooms?.find((r) => r.id === roomId),
-    [rooms, roomId]
-  );
-  const suggestedCategories = useMemo(() => {
-    if (!room?.name) return ['Geral'];
-    const normalizedRoom = normalizeLabel(room.name);
-    const exact = DEFAULT_ROOMS.find((dr) => normalizeLabel(dr.name) === normalizedRoom);
-    if (exact?.categories?.length) return exact.categories;
-    const partial = DEFAULT_ROOMS.find((dr) => {
-      const normalized = normalizeLabel(dr.name);
-      return normalized.includes(normalizedRoom) || normalizedRoom.includes(normalized);
-    });
-    return partial?.categories?.length ? partial.categories : ['Geral'];
-  }, [room?.name]);
-  const projectCategories = useMemo(
-    () =>
-      [...new Set((projectItems ?? []).map((i) => (i.category || '').trim()).filter(Boolean))]
-        .sort((a, b) => a.localeCompare(b)),
-    [projectItems]
-  );
-  const availableCategories = useMemo(
-    () => [...new Set([...suggestedCategories, ...projectCategories, ...customCategories])],
-    [suggestedCategories, projectCategories, customCategories]
-  );
-  const filteredSuggestedCategories = useMemo(() => {
-    const term = normalizeLabel(categorySearch);
-    if (!term) return availableCategories;
-    return availableCategories.filter((c) => normalizeLabel(c).includes(term));
-  }, [categorySearch, availableCategories]);
-
-  useEffect(() => {
-    if (item) {
-      setBudgetValue(String(item.budget || 0));
-      setNotesValue(item.notes || '');
-      setCategoryValue(item.category || 'Geral');
-    }
-  }, [item]);
-
-  const handleStatusChange = useCallback(
-    async (status: ItemStatus) => {
-      if (!itemId) return;
-      try {
-        await updateStatus.mutateAsync({ itemId, status });
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Erro ao atualizar status';
-        showAlert('Erro', message);
-      }
-    },
-    [itemId, updateStatus]
-  );
-
-  const handleAddOption = useCallback(async () => {
-    if (!optionName.trim() || !itemId) return;
-    try {
-      await createOption.mutateAsync({
-        item_id: itemId,
-        model_name: optionName.trim(),
-        brand: optionBrand.trim() || null,
-        price: optionPrice ? parseFloat(optionPrice) : null,
-        store: optionStore.trim() || null,
-        url: optionUrl.trim() || null,
-        notes: optionNotes.trim() || null,
-        rating: optionRating || null,
-        is_chosen: false,
-        created_by: user?.id ?? null,
-      });
-      resetOptionForm();
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Erro ao adicionar opção';
-      showAlert('Erro', message);
-    }
-  }, [
-    optionName,
-    optionBrand,
-    optionPrice,
-    optionStore,
-    optionUrl,
-    optionNotes,
-    optionRating,
-    itemId,
-    user,
-    createOption,
-  ]);
-
-  function resetOptionForm() {
-    setShowOptionForm(false);
-    setOptionName('');
-    setOptionBrand('');
-    setOptionPrice('');
-    setOptionStore('');
-    setOptionUrl('');
-    setOptionNotes('');
-    setOptionRating(0);
-  }
-
-  const handleChooseOption = useCallback(
-    async (optionId: string) => {
-      if (!itemId) return;
-      try {
-        await chooseOption.mutateAsync({ itemId, optionId });
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Erro ao escolher opção';
-        showAlert('Erro', message);
-      }
-    },
-    [itemId, chooseOption]
-  );
-
-  const handleDeleteOption = useCallback(
-    (optionId: string) => {
-      showAlert('Remover opção', 'Tem certeza?', [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Remover',
-          style: 'destructive',
-          onPress: () => deleteOption.mutate({ optionId, itemId: itemId! }),
-        },
-      ]);
-    },
-    [itemId, deleteOption]
-  );
-
-  const handleUploadPhoto = useCallback(
-    async (optionId: string) => {
-      try {
-        const uri = await pickImage();
-        if (!uri || !user) return;
-        setUploadingPhoto(true);
-        const publicUrl = await uploadPhoto(uri, user.id);
-        await addOptionPhoto(optionId, publicUrl);
-        refetchOptions();
-      } catch (error: unknown) {
-        const message =
-          error instanceof Error ? error.message : 'Erro ao enviar foto';
-        showAlert('Erro', message ?? 'Erro ao enviar foto');
-      } finally {
-        setUploadingPhoto(false);
-      }
-    },
-    [user, refetchOptions]
-  );
-
-  const handleSaveBudget = useCallback(async () => {
-    if (!itemId) return;
-    try {
-      await updateItem.mutateAsync({
-        itemId,
-        updates: { budget: parseFloat(budgetValue) || 0 },
-      });
-      setEditingBudget(false);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Erro ao salvar orçamento';
-      showAlert('Erro', message);
-    }
-  }, [itemId, budgetValue, updateItem]);
-
-  const handleSaveNotes = useCallback(async () => {
-    if (!itemId) return;
-    try {
-      await updateItem.mutateAsync({
-        itemId,
-        updates: { notes: notesValue || null },
-      });
-      setEditingNotes(false);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Erro ao salvar notas';
-      showAlert('Erro', message);
-    }
-  }, [itemId, notesValue, updateItem]);
-
-  const handleSaveCategory = useCallback(async () => {
-    if (!itemId) return;
-    const category = categoryValue.trim() || 'Geral';
-    try {
-      await updateItem.mutateAsync({
-        itemId,
-        updates: { category },
-      });
-      setEditingCategory(false);
-      setShowCategoryModal(false);
-      setCategorySearch('');
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Erro ao salvar categoria';
-      showAlert('Erro', message);
-    }
-  }, [itemId, categoryValue, updateItem]);
-
-  const handleAddCustomCategory = useCallback(() => {
-    const value = newCategoryName.trim();
-    if (!value) return;
-    const exists = availableCategories.some((cat) => normalizeLabel(cat) === normalizeLabel(value));
-    if (!exists) {
-      setCustomCategories((prev) => [...prev, value]);
-    }
-    setCategoryValue(value);
-    setNewCategoryName('');
-  }, [newCategoryName, availableCategories]);
-
-  const handleSendComment = useCallback(async () => {
-    if (!newComment.trim() || !itemId || !user) return;
-    try {
-      await createCommentMutation.mutateAsync({ userId: user.id, message: newComment.trim() });
-      setNewComment('');
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Erro ao enviar comentário';
-      showAlert('Erro', message);
-    }
-  }, [newComment, itemId, user, createCommentMutation]);
-
-  const handleShare = useCallback(
-    (option: ItemOptionWithPhotos) => {
-      shareViaWhatsApp({
-        name: `${item?.name} - ${option.model_name}`,
-        brand: option.brand,
-        price: option.price,
-        store: option.store,
-        url: option.url,
-      });
-    },
-    [item]
-  );
+  const room = rooms?.find((r) => r.id === roomId);
+  const categoryEditor = useCategoryEditor({
+    currentCategory: item?.category,
+    roomName: room?.name,
+    projectItems,
+    onSave: actions.saveCategory,
+  });
 
   if (isLoading) return <LoadingScreen />;
 
   if (isError || !item) {
     return (
-      <View className="flex-1 bg-cream">
+      <View className="flex-1 bg-cream dark:bg-sand-900">
         <Stack.Screen
           options={{
             headerShown: true,
             title: 'Erro',
-            headerStyle: { backgroundColor: '#FAFAF8' },
-            headerTintColor: '#33291E',
-            headerLeft: () => (
-              <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 8, marginLeft: 10, padding: 10 }}>
-                <Feather name="arrow-left" size={24} color="#33291E" />
-              </TouchableOpacity>
-            ),
+            headerStyle: { backgroundColor: colors.headerBg },
+            headerTintColor: colors.textPrimary,
+            headerLeft: () => <BackButton onPress={() => router.back()} color={colors.textPrimary} />,
           }}
         />
         <EmptyState
@@ -356,165 +97,82 @@ export default function ItemDetailScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      className="flex-1 bg-cream"
+      className="flex-1 bg-cream dark:bg-sand-900"
     >
       <Stack.Screen
         options={{
           headerShown: true,
           title: item.name,
-          headerStyle: { backgroundColor: '#FAFAF8' },
-          headerTintColor: '#33291E',
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 8, marginLeft: 10, padding: 10 }}>
-              <Feather name="arrow-left" size={24} color="#33291E" />
-            </TouchableOpacity>
-          ),
+          headerStyle: { backgroundColor: colors.headerBg },
+          headerTintColor: colors.textPrimary,
+          headerLeft: () => <BackButton onPress={() => router.back()} color={colors.textPrimary} />,
         }}
       />
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 120 }}>
-        {/* Header info */}
-        <View className="px-4 pt-4">
-          <Card>
-            <View className="flex-row items-center justify-between mb-3">
-              <View className="flex-row items-center">
-                <Text className="text-sand-500 text-sm mr-2">{item.category}</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setEditingCategory(true);
-                    setCategoryValue(item.category || 'Geral');
-                    setShowCategoryModal(true);
-                  }}
-                >
-                  <Feather name="edit-2" size={14} color="#A89270" />
-                </TouchableOpacity>
-              </View>
-              <StatusChip status={item.status} />
-            </View>
-            <Text className="text-sand-900 text-xl font-bold">{item.name}</Text>
-            <Text className="text-sand-500 text-xs mt-1">
-              Qtd: {item.quantity} · Atualizado em {formatDateTime(item.updated_at)}
-            </Text>
+        <ItemHeaderCard
+          item={item}
+          onEditCategory={categoryEditor.open}
+          onStatusChange={actions.changeStatus}
+        />
 
-            {/* Status buttons */}
-            <View className="flex-row flex-wrap gap-2 mt-4">
-              {STATUSES.map((s) => (
-                <TouchableOpacity
-                  key={s.key}
-                  onPress={() => handleStatusChange(s.key)}
-                  className={`px-3 py-1.5 rounded-full border ${
-                    item.status === s.key
-                      ? 'border-transparent'
-                      : 'border-sand-200 bg-white'
-                  }`}
-                  style={
-                    item.status === s.key
-                      ? { backgroundColor: s.color + '20', borderColor: s.color }
-                      : undefined
-                  }
-                >
-                  <Text
-                    className="text-xs font-medium"
-                    style={{ color: item.status === s.key ? s.color : '#6B7280' }}
-                  >
-                    {s.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </Card>
-        </View>
-
-        {/* Budget */}
-        <View className="px-4 mt-4">
-          <Card>
-            <View className="flex-row items-center justify-between">
-              <Text className="text-sand-700 font-semibold">Orçamento</Text>
-              <TouchableOpacity onPress={() => setEditingBudget(true)}>
-                <Feather name="edit-2" size={16} color="#A89270" />
-              </TouchableOpacity>
-            </View>
-            {editingBudget ? (
-              <View className="flex-row items-center mt-2 gap-2">
-                <TextInput
-                  style={{
-                    flex: 1,
-                    borderWidth: 1,
-                    borderColor: '#D6CDB9',
-                    borderRadius: 8,
-                    paddingHorizontal: 12,
-                    paddingVertical: 8,
-                    fontSize: 16,
-                    color: '#33291E',
-                  }}
-                  value={budgetValue}
-                  onChangeText={setBudgetValue}
-                  keyboardType="numeric"
-                  placeholder="0.00"
-                  placeholderTextColor="#9CA3AF"
-                />
-                <Button title="Salvar" onPress={handleSaveBudget} size="sm" />
-              </View>
-            ) : (
+        <EditableTextCard
+          title="Orçamento"
+          editing={editingBudget}
+          onStartEdit={() => {
+            setBudgetValue(String(item.budget || 0));
+            setEditingBudget(true);
+          }}
+          value={budgetValue}
+          onChangeValue={setBudgetValue}
+          onSave={async () => {
+            if (await actions.saveBudget(parseFloat(budgetValue) || 0)) setEditingBudget(false);
+          }}
+          keyboardType="numeric"
+          placeholder="0.00"
+          displayContent={
+            <>
               <Text className="text-2xl font-bold text-sand-900 mt-1">
                 {formatCurrency(Number(item.budget) || 0)}
               </Text>
-            )}
-            {item.actual_price !== null && item.actual_price !== undefined && (
-              <Text className="text-moss-500 text-sm mt-1">
-                Preço real: {formatCurrency(Number(item.actual_price))}
-              </Text>
-            )}
-          </Card>
-        </View>
+              {item.actual_price !== null && item.actual_price !== undefined && (
+                <Text className="text-moss-500 text-sm mt-1">
+                  Preço real: {formatCurrency(Number(item.actual_price))}
+                </Text>
+              )}
+            </>
+          }
+        />
 
-        {/* Notes */}
-        <View className="px-4 mt-4">
-          <Card>
-            <View className="flex-row items-center justify-between mb-2">
-              <Text className="text-sand-700 font-semibold">Notas</Text>
-              <TouchableOpacity onPress={() => setEditingNotes(true)}>
-                <Feather name="edit-2" size={16} color="#A89270" />
-              </TouchableOpacity>
-            </View>
-            {editingNotes ? (
-              <View>
-                <TextInput
-                  style={{
-                    borderWidth: 1,
-                    borderColor: '#D6CDB9',
-                    borderRadius: 8,
-                    paddingHorizontal: 12,
-                    paddingVertical: 8,
-                    fontSize: 16,
-                    color: '#33291E',
-                    minHeight: 80,
-                    textAlignVertical: 'top',
-                  }}
-                  value={notesValue}
-                  onChangeText={setNotesValue}
-                  multiline
-                  placeholder="Adicione notas..."
-                  placeholderTextColor="#9CA3AF"
-                />
-                <Button title="Salvar" onPress={handleSaveNotes} size="sm" className="mt-2" />
-              </View>
-            ) : (
-              <Text className="text-sand-600 text-sm">
-                {item.notes || 'Nenhuma nota adicionada'}
-              </Text>
-            )}
-          </Card>
-        </View>
+        <EditableTextCard
+          title="Notas"
+          editing={editingNotes}
+          onStartEdit={() => {
+            setNotesValue(item.notes || '');
+            setEditingNotes(true);
+          }}
+          value={notesValue}
+          onChangeValue={setNotesValue}
+          onSave={async () => {
+            if (await actions.saveNotes(notesValue || null)) setEditingNotes(false);
+          }}
+          multiline
+          placeholder="Adicione notas..."
+          displayContent={
+            <Text className="text-sand-600 text-sm">{item.notes || 'Nenhuma nota adicionada'}</Text>
+          }
+        />
 
         {/* Options */}
         <View className="px-4 mt-6">
           <View className="flex-row items-center justify-between mb-3">
-            <Text className="text-sand-900 text-lg font-bold">
+            <Text className="text-sand-900 dark:text-sand-50 text-lg font-bold">
               Opções de Produto ({options?.length ?? 0})
             </Text>
             <TouchableOpacity
               onPress={() => setShowOptionForm(true)}
               className="flex-row items-center"
+              accessibilityRole="button"
+              accessibilityLabel="Adicionar opção de produto"
             >
               <Feather name="plus" size={18} color="#C1694F" />
               <Text className="text-terracotta-500 font-medium ml-1 text-sm">Adicionar</Text>
@@ -522,122 +180,26 @@ export default function ItemDetailScreen() {
           </View>
 
           {showOptionForm && (
-            <Card className="mb-4">
-              <Text className="text-sand-900 font-semibold mb-3">Nova Opção</Text>
-              <Input label="Modelo/Nome" placeholder="Ex: Lorenzetti Advanced" value={optionName} onChangeText={setOptionName} />
-              <Input label="Marca" placeholder="Ex: Lorenzetti" value={optionBrand} onChangeText={setOptionBrand} />
-              <View className="flex-row gap-3">
-                <View className="flex-1">
-                  <Input label="Preço (R$)" placeholder="0.00" value={optionPrice} onChangeText={setOptionPrice} keyboardType="numeric" />
-                </View>
-                <View className="flex-1">
-                  <Input label="Loja" placeholder="Ex: Leroy Merlin" value={optionStore} onChangeText={setOptionStore} />
-                </View>
-              </View>
-              <Input label="Link URL" placeholder="https://..." value={optionUrl} onChangeText={setOptionUrl} keyboardType="url" />
-              <Input label="Observações" placeholder="Notas sobre esta opção" value={optionNotes} onChangeText={setOptionNotes} multiline />
-              <View className="mb-4">
-                <Text className="text-sand-800 font-medium text-sm mb-2">Avaliação</Text>
-                <StarRating rating={optionRating} editable onRate={setOptionRating} />
-              </View>
-              <View className="flex-row gap-3">
-                <Button title="Cancelar" onPress={resetOptionForm} variant="ghost" size="sm" className="flex-1" />
-                <Button title="Salvar" onPress={handleAddOption} size="sm" loading={createOption.isPending} className="flex-1" />
-              </View>
-            </Card>
+            <OptionForm
+              onCancel={() => setShowOptionForm(false)}
+              onSubmit={async (values) => {
+                await actions.addOption(values);
+                setShowOptionForm(false);
+              }}
+              loading={actions.creatingOption}
+            />
           )}
 
           {options?.map((option) => (
-            <Card key={option.id} className="mb-3">
-              <View className="flex-row items-start justify-between">
-                <View className="flex-1">
-                  <View className="flex-row items-center">
-                    {option.is_chosen && (
-                      <View className="bg-moss-100 px-2 py-0.5 rounded-full mr-2">
-                        <Text className="text-moss-700 text-xs font-medium">Escolhido</Text>
-                      </View>
-                    )}
-                    <Text className="text-sand-900 font-semibold text-base flex-shrink">
-                      {option.model_name}
-                    </Text>
-                  </View>
-                  {option.brand && (
-                    <Text className="text-sand-500 text-sm mt-0.5">{option.brand}</Text>
-                  )}
-                </View>
-                {option.price !== null && option.price !== undefined && (
-                  <Text className="text-terracotta-500 font-bold text-lg">
-                    {formatCurrency(Number(option.price))}
-                  </Text>
-                )}
-              </View>
-
-              {option.store && (
-                <View className="flex-row items-center mt-2">
-                  <Feather name="shopping-bag" size={14} color="#A89270" />
-                  <Text className="text-sand-600 text-sm ml-1">{option.store}</Text>
-                </View>
-              )}
-
-              {option.rating !== null && option.rating !== undefined && (
-                <View className="mt-2">
-                  <StarRating rating={option.rating} size={16} />
-                </View>
-              )}
-
-              {option.notes && (
-                <Text className="text-sand-500 text-sm mt-2">{option.notes}</Text>
-              )}
-
-              {/* Photos */}
-              {option.item_option_photos.length > 0 && (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-3">
-                  {option.item_option_photos.map((photo) => (
-                    <Image
-                      key={photo.id}
-                      source={{ uri: photo.storage_url }}
-                      className="w-20 h-20 rounded-lg mr-2"
-                      resizeMode="cover"
-                    />
-                  ))}
-                </ScrollView>
-              )}
-
-              {/* Action buttons */}
-              <View className="flex-row items-center justify-between mt-3 pt-3 border-t border-sand-100">
-                <View className="flex-row gap-3">
-                  <TouchableOpacity
-                    onPress={() => handleUploadPhoto(option.id)}
-                    className="flex-row items-center"
-                    disabled={uploadingPhoto}
-                  >
-                    <Feather name="camera" size={16} color="#A89270" />
-                    <Text className="text-sand-600 text-xs ml-1">Foto</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => handleShare(option)}
-                    className="flex-row items-center"
-                  >
-                    <Feather name="share" size={16} color="#A89270" />
-                    <Text className="text-sand-600 text-xs ml-1">Enviar</Text>
-                  </TouchableOpacity>
-                </View>
-                <View className="flex-row gap-3">
-                  {!option.is_chosen && (
-                    <TouchableOpacity
-                      onPress={() => handleChooseOption(option.id)}
-                      className="flex-row items-center bg-moss-50 px-3 py-1.5 rounded-full"
-                    >
-                      <Feather name="check" size={14} color="#5B7553" />
-                      <Text className="text-moss-600 text-xs font-medium ml-1">Escolher</Text>
-                    </TouchableOpacity>
-                  )}
-                  <TouchableOpacity onPress={() => handleDeleteOption(option.id)}>
-                    <Feather name="trash-2" size={16} color="#EF4444" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </Card>
+            <OptionCard
+              key={option.id}
+              option={option}
+              uploadingPhoto={actions.uploadingPhoto}
+              onChoose={actions.chooseOption}
+              onDelete={actions.deleteOption}
+              onUploadPhoto={actions.uploadOptionPhoto}
+              onShare={actions.share}
+            />
           ))}
 
           {(!options || options.length === 0) && !showOptionForm && (
@@ -651,219 +213,32 @@ export default function ItemDetailScreen() {
           )}
         </View>
 
-        {/* Comments */}
-        <View className="px-4 mt-6">
-          <Text className="text-sand-900 text-lg font-bold mb-3">
-            Comentários ({comments.length})
-          </Text>
-          {comments.map((comment) => (
-            <View key={comment.id} className="bg-white rounded-xl p-3 mb-2 border border-sand-100">
-              <View className="flex-row items-center justify-between mb-1">
-                <Text className="text-sand-700 text-xs font-medium">
-                  {comment.profiles?.full_name ?? 'Usuário'}
-                </Text>
-                <Text className="text-sand-400 text-xs">
-                  {formatDateTime(comment.created_at)}
-                </Text>
-              </View>
-              <Text className="text-sand-800 text-sm">{comment.message}</Text>
-            </View>
-          ))}
-        </View>
+        <CommentList comments={comments} />
       </ScrollView>
 
-      <Modal
-        visible={showCategoryModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => {
-          setShowCategoryModal(false);
-          setEditingCategory(false);
-          setCategorySearch('');
-          setNewCategoryName('');
+      <CategoryPickerModal
+        visible={categoryEditor.visible}
+        onClose={categoryEditor.close}
+        categoryValue={categoryEditor.categoryValue}
+        onChangeCategoryValue={categoryEditor.setCategoryValue}
+        categorySearch={categoryEditor.categorySearch}
+        onChangeCategorySearch={categoryEditor.setCategorySearch}
+        filteredCategories={categoryEditor.filteredCategories}
+        newCategoryName={categoryEditor.newCategoryName}
+        onChangeNewCategoryName={categoryEditor.setNewCategoryName}
+        onAddCustomCategory={categoryEditor.addCustomCategory}
+        onSave={categoryEditor.save}
+        saving={actions.savingItem}
+      />
+
+      <CommentComposer
+        value={newComment}
+        onChangeText={setNewComment}
+        onSend={async () => {
+          if (await actions.sendComment(newComment)) setNewComment('');
         }}
-      >
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'flex-end' }}>
-          <TouchableOpacity
-            style={{ flex: 1 }}
-            activeOpacity={1}
-            onPress={() => {
-              setShowCategoryModal(false);
-              setEditingCategory(false);
-              setCategorySearch('');
-              setNewCategoryName('');
-            }}
-          />
-          <View
-            style={{
-              backgroundColor: '#FAFAF8',
-              borderTopLeftRadius: 16,
-              borderTopRightRadius: 16,
-              paddingHorizontal: 16,
-              paddingTop: 12,
-              paddingBottom: 20,
-              maxHeight: '85%',
-            }}
-          >
-            <View style={{ alignItems: 'center', marginBottom: 8 }}>
-              <View style={{ width: 44, height: 4, borderRadius: 2, backgroundColor: '#D6CDB9' }} />
-            </View>
-            <Text style={{ fontSize: 16, fontWeight: '600', color: '#33291E', marginBottom: 12 }}>
-              Editar categoria
-            </Text>
-
-            <TextInput
-              value={categorySearch}
-              onChangeText={setCategorySearch}
-              placeholder="Pesquisar categoria sugerida"
-              placeholderTextColor="#9CA3AF"
-              style={{
-                borderWidth: 1,
-                borderColor: '#D6CDB9',
-                borderRadius: 10,
-                paddingHorizontal: 12,
-                paddingVertical: 10,
-                marginBottom: 10,
-                color: '#33291E',
-                fontSize: 14,
-                backgroundColor: '#fff',
-              }}
-            />
-
-            <ScrollView style={{ maxHeight: 220 }} contentContainerStyle={{ paddingBottom: 8 }}>
-              {filteredSuggestedCategories.map((category) => (
-                <TouchableOpacity
-                  key={category}
-                  onPress={() => setCategoryValue(category)}
-                  style={{
-                    paddingVertical: 10,
-                    paddingHorizontal: 12,
-                    borderRadius: 10,
-                    marginBottom: 6,
-                    backgroundColor: categoryValue === category ? '#DDE9D8' : '#FFFFFF',
-                    borderWidth: 1,
-                    borderColor: categoryValue === category ? '#5B7553' : '#EDE5D6',
-                  }}
-                >
-                  <Text style={{ color: '#33291E', fontWeight: '500', fontSize: 14 }}>{category}</Text>
-                </TouchableOpacity>
-              ))}
-              {filteredSuggestedCategories.length === 0 && (
-                <Text style={{ color: '#8B7355', fontSize: 13, textAlign: 'center', marginVertical: 12 }}>
-                  Nenhuma categoria sugerida encontrada.
-                </Text>
-              )}
-            </ScrollView>
-
-            <Text style={{ color: '#33291E', fontWeight: '600', fontSize: 13, marginBottom: 6, marginTop: 4 }}>
-              Categoria selecionada
-            </Text>
-            <TextInput
-              value={categoryValue}
-              onChangeText={setCategoryValue}
-              placeholder="Digite uma categoria"
-              placeholderTextColor="#9CA3AF"
-              style={{
-                borderWidth: 1,
-                borderColor: '#D6CDB9',
-                borderRadius: 10,
-                paddingHorizontal: 12,
-                paddingVertical: 10,
-                color: '#33291E',
-                fontSize: 14,
-                backgroundColor: '#fff',
-                marginBottom: 12,
-              }}
-            />
-
-            <Text style={{ color: '#33291E', fontWeight: '600', fontSize: 13, marginBottom: 6 }}>
-              Criar nova categoria
-            </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <TextInput
-                value={newCategoryName}
-                onChangeText={setNewCategoryName}
-                placeholder="Nova categoria"
-                placeholderTextColor="#9CA3AF"
-                style={{
-                  flex: 1,
-                  borderWidth: 1,
-                  borderColor: '#D6CDB9',
-                  borderRadius: 10,
-                  paddingHorizontal: 12,
-                  paddingVertical: 10,
-                  color: '#33291E',
-                  fontSize: 14,
-                  backgroundColor: '#fff',
-                }}
-              />
-              <TouchableOpacity
-                onPress={handleAddCustomCategory}
-                disabled={!newCategoryName.trim()}
-                style={{
-                  paddingHorizontal: 12,
-                  paddingVertical: 10,
-                  borderRadius: 10,
-                  backgroundColor: newCategoryName.trim() ? '#B85C38' : '#D6CDB9',
-                }}
-              >
-                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Adicionar</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <Button
-                title="Cancelar"
-                onPress={() => {
-                  setShowCategoryModal(false);
-                  setEditingCategory(false);
-                  setCategorySearch('');
-                }}
-                variant="ghost"
-                size="sm"
-                className="flex-1"
-              />
-              <Button
-                title="Salvar"
-                onPress={handleSaveCategory}
-                size="sm"
-                className="flex-1"
-                loading={updateItem.isPending && editingCategory}
-              />
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Comment input */}
-      <View className="px-4 py-3 bg-white border-t border-sand-100">
-        <View className="flex-row items-center gap-2">
-          <TextInput
-            style={{
-              flex: 1,
-              borderWidth: 1,
-              borderColor: '#D6CDB9',
-              borderRadius: 12,
-              paddingHorizontal: 16,
-              paddingVertical: 10,
-              fontSize: 16,
-              color: '#33291E',
-            }}
-            placeholder="Escreva um comentário..."
-            value={newComment}
-            onChangeText={setNewComment}
-            placeholderTextColor="#9CA3AF"
-          />
-          <TouchableOpacity
-            onPress={handleSendComment}
-            disabled={createCommentMutation.isPending || !newComment.trim()}
-            className="bg-terracotta-500 w-10 h-10 rounded-full items-center justify-center"
-            style={{ opacity: createCommentMutation.isPending || !newComment.trim() ? 0.5 : 1 }}
-          >
-            <Feather name="send" size={18} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      </View>
+        sending={actions.sendingComment}
+      />
     </KeyboardAvoidingView>
   );
 }
