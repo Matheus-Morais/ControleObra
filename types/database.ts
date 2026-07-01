@@ -57,6 +57,8 @@ export interface Item {
 export interface ItemOption {
   id: string;
   item_id: string;
+  /** Desnormalizado do item pai via trigger (usado no filtro de realtime). */
+  project_id?: string | null;
   model_name: string;
   brand: string | null;
   price: number | null;
@@ -80,6 +82,8 @@ export interface ItemOptionPhoto {
 export interface ItemComment {
   id: string;
   item_id: string;
+  /** Desnormalizado do item pai via trigger (usado no filtro de realtime). */
+  project_id?: string | null;
   user_id: string;
   message: string;
   created_at: string;

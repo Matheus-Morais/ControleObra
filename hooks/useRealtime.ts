@@ -39,12 +39,12 @@ export function useRealtimeSubscription(projectId: string | undefined) {
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'item_options' },
+        { event: '*', schema: 'public', table: 'item_options', filter: `project_id=eq.${projectId}` },
         scheduleInvalidate
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'item_comments' },
+        { event: '*', schema: 'public', table: 'item_comments', filter: `project_id=eq.${projectId}` },
         scheduleInvalidate
       )
       .on(

@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS items (
 CREATE TABLE IF NOT EXISTS item_options (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   item_id UUID REFERENCES items(id) ON DELETE CASCADE NOT NULL,
+  project_id UUID REFERENCES projects(id) ON DELETE CASCADE NOT NULL,
   model_name TEXT NOT NULL,
   brand TEXT,
   price NUMERIC(12,2),
@@ -94,6 +95,7 @@ CREATE TABLE IF NOT EXISTS item_option_photos (
 CREATE TABLE IF NOT EXISTS item_comments (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   item_id UUID REFERENCES items(id) ON DELETE CASCADE NOT NULL,
+  project_id UUID REFERENCES projects(id) ON DELETE CASCADE NOT NULL,
   user_id UUID REFERENCES auth.users(id) NOT NULL,
   message TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL
@@ -123,8 +125,10 @@ CREATE INDEX idx_items_room ON items(room_id);
 CREATE INDEX idx_items_project ON items(project_id);
 CREATE INDEX idx_items_status ON items(status);
 CREATE INDEX idx_item_options_item ON item_options(item_id);
+CREATE INDEX idx_item_options_project ON item_options(project_id);
 CREATE INDEX idx_item_option_photos_option ON item_option_photos(item_option_id);
 CREATE INDEX idx_item_comments_item ON item_comments(item_id);
+CREATE INDEX idx_item_comments_project ON item_comments(project_id);
 CREATE INDEX idx_transactions_project ON transactions(project_id);
 CREATE INDEX idx_projects_invite_code ON projects(invite_code);
 
@@ -187,6 +191,28 @@ CREATE TRIGGER update_projects_updated_at
 CREATE TRIGGER update_items_updated_at
   BEFORE UPDATE ON items
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- Preenche project_id (desnormalizado) a partir do item pai, para permitir
+-- o filtro de realtime por projeto em item_options e item_comments.
+CREATE OR REPLACE FUNCTION set_project_id_from_item()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.project_id IS NULL THEN
+    SELECT project_id INTO NEW.project_id FROM items WHERE id = NEW.item_id;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS set_item_options_project_id ON item_options;
+CREATE TRIGGER set_item_options_project_id
+  BEFORE INSERT ON item_options
+  FOR EACH ROW EXECUTE FUNCTION set_project_id_from_item();
+
+DROP TRIGGER IF EXISTS set_item_comments_project_id ON item_comments;
+CREATE TRIGGER set_item_comments_project_id
+  BEFORE INSERT ON item_comments
+  FOR EACH ROW EXECUTE FUNCTION set_project_id_from_item();
 
 -- =============================================================================
 -- ROW LEVEL SECURITY (RLS)
