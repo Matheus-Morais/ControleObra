@@ -82,20 +82,24 @@ export default function OnboardingScreen() {
       >
         <Feather name={item.icon} size={56} color={item.color} />
       </View>
-      <Text className="text-sand-900 text-2xl font-bold text-center mb-4">
+      <Text className="text-sand-900 dark:text-sand-50 text-2xl font-bold text-center mb-4">
         {item.title}
       </Text>
-      <Text className="text-sand-500 text-base text-center leading-6">
+      <Text className="text-sand-500 dark:text-sand-400 text-base text-center leading-6">
         {item.description}
       </Text>
     </View>
   );
 
   return (
-    <View className="flex-1 bg-cream">
+    <View className="flex-1 bg-cream dark:bg-sand-900">
       <View className="flex-row justify-end px-6 pt-14">
-        <TouchableOpacity onPress={handleSkip}>
-          <Text className="text-sand-500 text-base font-medium">Pular</Text>
+        <TouchableOpacity
+          onPress={handleSkip}
+          accessibilityRole="button"
+          accessibilityLabel="Pular introdução"
+        >
+          <Text className="text-sand-500 dark:text-sand-400 text-base font-medium">Pular</Text>
         </TouchableOpacity>
       </View>
 
@@ -118,7 +122,7 @@ export default function OnboardingScreen() {
             <View
               key={index}
               className={`h-2 rounded-full mx-1 ${
-                index === currentIndex ? 'w-8 bg-terracotta-500' : 'w-2 bg-sand-300'
+                index === currentIndex ? 'w-8 bg-terracotta-500' : 'w-2 bg-sand-300 dark:bg-sand-600'
               }`}
             />
           ))}
@@ -126,6 +130,8 @@ export default function OnboardingScreen() {
 
         <TouchableOpacity
           onPress={handleNext}
+          accessibilityRole="button"
+          accessibilityLabel={currentIndex === SLIDES.length - 1 ? 'Começar' : 'Próximo'}
           className="bg-terracotta-500 py-4 rounded-xl items-center"
           activeOpacity={0.8}
         >

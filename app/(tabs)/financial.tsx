@@ -1,7 +1,9 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { Feather } from '@expo/vector-icons';
 import { useProjectStore } from '../../stores/projectStore';
+import { useTheme } from '../../hooks/useTheme';
 import { useAuthStore } from '../../stores/authStore';
 import { useProjectItems } from '../../hooks/useItems';
 import { useRooms } from '../../hooks/useRooms';
@@ -16,6 +18,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 
 export default function FinancialScreen() {
+  const { colors } = useTheme();
   const activeProject = useProjectStore((s) => s.activeProject);
   const user = useAuthStore((s) => s.user);
   const { data: items } = useProjectItems(activeProject?.id);
@@ -171,40 +174,41 @@ export default function FinancialScreen() {
 
   if (isError || loadingTimeout) {
     return (
-      <View className="flex-1 items-center justify-center bg-cream p-8">
+      <View className="flex-1 items-center justify-center bg-cream dark:bg-sand-900 p-8">
         <Feather name="alert-circle" size={40} color="#EF4444" />
-        <Text className="text-sand-800 text-lg font-semibold text-center mt-4 mb-2">
+        <Text className="text-sand-800 dark:text-sand-100 text-lg font-semibold text-center mt-4 mb-2">
           {loadingTimeout ? 'Conexão lenta' : 'Erro ao carregar dados'}
         </Text>
-        <Text className="text-sand-500 text-sm text-center mb-6">Verifique sua conexão e tente novamente</Text>
+        <Text className="text-sand-500 dark:text-sand-400 text-sm text-center mb-6">Verifique sua conexão e tente novamente</Text>
         <Button title="Tentar novamente" onPress={() => refetch()} size="sm" />
       </View>
     );
   }
 
-  return (
-    <ScrollView className="flex-1 bg-cream" contentContainerStyle={{ paddingBottom: 30 }}>
-      <View className="px-4 pt-6">
-        <View className="flex-row items-center justify-between mb-4">
-          <Text className="text-xl font-bold text-sand-900">Financeiro</Text>
-          <TouchableOpacity
-            onPress={handleExportPDF}
-            className="flex-row items-center bg-terracotta-50 px-3 py-2 rounded-lg"
-          >
-            <Feather name="download" size={16} color="#C1694F" />
-            <Text className="text-terracotta-500 font-medium text-sm ml-1">PDF</Text>
-          </TouchableOpacity>
-        </View>
+  const listHeader = (
+    <View className="px-4 pt-6">
+      <View className="flex-row items-center justify-between mb-4">
+        <Text className="text-xl font-bold text-sand-900 dark:text-sand-50">Financeiro</Text>
+        <TouchableOpacity
+          onPress={handleExportPDF}
+          accessibilityRole="button"
+          accessibilityLabel="Exportar PDF"
+          className="flex-row items-center bg-terracotta-50 dark:bg-terracotta-900 px-3 py-2 rounded-lg"
+        >
+          <Feather name="download" size={16} color="#C1694F" />
+          <Text className="text-terracotta-500 font-medium text-sm ml-1">PDF</Text>
+        </TouchableOpacity>
+      </View>
 
-        {/* Summary */}
-        <Card className="mb-4">
+      {/* Summary */}
+      <Card className="mb-4">
           <View className="flex-row justify-between mb-3">
             <View>
-              <Text className="text-sand-500 text-xs">Orçamento Total</Text>
-              <Text className="text-sand-900 text-2xl font-bold">{formatCurrency(totalBudget)}</Text>
+              <Text className="text-sand-500 dark:text-sand-400 text-xs">Orçamento Total</Text>
+              <Text className="text-sand-900 dark:text-sand-50 text-2xl font-bold">{formatCurrency(totalBudget)}</Text>
             </View>
             <View className="items-end">
-              <Text className="text-sand-500 text-xs">Total Gasto</Text>
+              <Text className="text-sand-500 dark:text-sand-400 text-xs">Total Gasto</Text>
               <Text className="text-terracotta-500 text-2xl font-bold">{formatCurrency(totalSpent)}</Text>
             </View>
           </View>
@@ -213,7 +217,7 @@ export default function FinancialScreen() {
             color={totalSpent > totalBudget ? 'bg-red-500' : 'bg-terracotta-500'}
           />
           <View className="flex-row justify-between mt-2">
-            <Text className="text-sand-500 text-xs">
+            <Text className="text-sand-500 dark:text-sand-400 text-xs">
               Restante: {formatCurrency(Math.max(0, totalBudget - totalSpent))}
             </Text>
             <Text className={`text-xs font-medium ${totalSpent > totalBudget ? 'text-red-500' : 'text-moss-500'}`}>
@@ -225,7 +229,7 @@ export default function FinancialScreen() {
         {/* Room breakdown */}
         {roomBreakdown.length > 0 && (
           <View className="mb-6">
-            <Text className="text-sand-900 font-bold text-base mb-3">Por Cômodo</Text>
+            <Text className="text-sand-900 dark:text-sand-50 font-bold text-base mb-3">Por Cômodo</Text>
             {roomBreakdown.map((room) => (
               <Card key={room.name} className="mb-2">
                 <View className="flex-row items-center justify-between">
@@ -234,14 +238,14 @@ export default function FinancialScreen() {
                       className="w-3 h-3 rounded-full mr-2"
                       style={{ backgroundColor: room.color }}
                     />
-                    <Text className="text-sand-800 text-sm font-medium">{room.name}</Text>
+                    <Text className="text-sand-800 dark:text-sand-100 text-sm font-medium">{room.name}</Text>
                   </View>
                   <View className="items-end">
-                    <Text className="text-sand-900 text-sm font-semibold">
+                    <Text className="text-sand-900 dark:text-sand-50 text-sm font-semibold">
                       {formatCurrency(room.budget)}
                     </Text>
                     {room.spent > 0 && (
-                      <Text className="text-sand-500 text-xs">
+                      <Text className="text-sand-500 dark:text-sand-400 text-xs">
                         Gasto: {formatCurrency(room.spent)}
                       </Text>
                     )}
@@ -255,7 +259,7 @@ export default function FinancialScreen() {
         {/* Category breakdown */}
         {categoryBreakdown.length > 0 && (
           <View className="mb-6">
-            <Text className="text-sand-900 font-bold text-base mb-3">Por Categoria</Text>
+            <Text className="text-sand-900 dark:text-sand-50 font-bold text-base mb-3">Por Categoria</Text>
             {categoryBreakdown.map((group) => {
               const isExpanded = !!expandedCategories[group.category];
               return (
@@ -267,38 +271,40 @@ export default function FinancialScreen() {
                         [group.category]: !prev[group.category],
                       }))
                     }
+                    accessibilityRole="button"
+                    accessibilityLabel={isExpanded ? `Recolher categoria ${group.category}` : `Expandir categoria ${group.category}`}
                     className="flex-row items-center justify-between"
                   >
                     <View className="flex-1 pr-2">
-                      <Text className="text-sand-900 text-sm font-semibold">{group.category}</Text>
-                      <Text className="text-sand-500 text-xs mt-0.5">
+                      <Text className="text-sand-900 dark:text-sand-50 text-sm font-semibold">{group.category}</Text>
+                      <Text className="text-sand-500 dark:text-sand-400 text-xs mt-0.5">
                         {group.items.length} {group.items.length === 1 ? 'item' : 'itens'}
                       </Text>
                     </View>
                     <View className="items-end mr-2">
-                      <Text className="text-sand-900 text-sm font-semibold">
+                      <Text className="text-sand-900 dark:text-sand-50 text-sm font-semibold">
                         Planejado: {formatCurrency(group.planned)}
                       </Text>
-                      <Text className="text-sand-500 text-xs mt-0.5">
+                      <Text className="text-sand-500 dark:text-sand-400 text-xs mt-0.5">
                         Gasto: {formatCurrency(group.spent)}
                       </Text>
                     </View>
                     <Feather
                       name={isExpanded ? 'chevron-up' : 'chevron-down'}
                       size={18}
-                      color="#8B7355"
+                      color={colors.textSecondary}
                     />
                   </TouchableOpacity>
 
                   {isExpanded && (
-                    <View className="mt-3 pt-3 border-t border-sand-100">
+                    <View className="mt-3 pt-3 border-t border-sand-100 dark:border-sand-700">
                       {group.items.map((item) => (
                         <View key={item.id} className="mb-2">
-                          <Text className="text-sand-800 text-sm font-medium">{item.name}</Text>
-                          <Text className="text-sand-500 text-xs">
+                          <Text className="text-sand-800 dark:text-sand-100 text-sm font-medium">{item.name}</Text>
+                          <Text className="text-sand-500 dark:text-sand-400 text-xs">
                             Cômodo: {item.roomName}
                           </Text>
-                          <Text className="text-sand-500 text-xs">
+                          <Text className="text-sand-500 dark:text-sand-400 text-xs">
                             Planejado: {formatCurrency(item.planned)} · Gasto: {formatCurrency(item.spent)}
                           </Text>
                         </View>
@@ -313,8 +319,13 @@ export default function FinancialScreen() {
 
         {/* Transactions */}
         <View className="flex-row items-center justify-between mb-3">
-          <Text className="text-sand-900 font-bold text-base">Pagamentos</Text>
-          <TouchableOpacity onPress={() => setShowAddForm(true)} className="flex-row items-center">
+          <Text className="text-sand-900 dark:text-sand-50 font-bold text-base">Pagamentos</Text>
+          <TouchableOpacity
+            onPress={() => setShowAddForm(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Adicionar pagamento"
+            className="flex-row items-center"
+          >
             <Feather name="plus" size={18} color="#C1694F" />
             <Text className="text-terracotta-500 font-medium text-sm ml-1">Adicionar</Text>
           </TouchableOpacity>
@@ -332,19 +343,30 @@ export default function FinancialScreen() {
           </Card>
         )}
 
-        {transactions.length === 0 ? (
-          <View className="py-8">
-            <Text className="text-sand-500 text-center">Nenhum pagamento registrado</Text>
+      </View>
+  );
+
+  return (
+    <View className="flex-1 bg-cream dark:bg-sand-900">
+      <FlashList
+        data={transactions}
+        keyExtractor={(txn) => txn.id}
+        contentContainerStyle={{ paddingBottom: 30 }}
+        ListHeaderComponent={listHeader}
+        ListEmptyComponent={
+          <View className="px-4 py-8">
+            <Text className="text-sand-500 dark:text-sand-400 text-center">Nenhum pagamento registrado</Text>
           </View>
-        ) : (
-          transactions.map((txn) => (
-            <Card key={txn.id} className="mb-2">
+        }
+        renderItem={({ item: txn }) => (
+          <View className="px-4">
+            <Card className="mb-2">
               <View className="flex-row items-center justify-between">
                 <View className="flex-1">
-                  <Text className="text-sand-900 font-medium text-sm">
+                  <Text className="text-sand-900 dark:text-sand-50 font-medium text-sm">
                     {txn.description ?? 'Pagamento'}
                   </Text>
-                  <Text className="text-sand-400 text-xs mt-0.5">
+                  <Text className="text-sand-400 dark:text-sand-500 text-xs mt-0.5">
                     {formatDate(txn.paid_at)}
                   </Text>
                 </View>
@@ -352,15 +374,19 @@ export default function FinancialScreen() {
                   <Text className="text-terracotta-500 font-bold text-base mr-3">
                     {formatCurrency(Number(txn.amount))}
                   </Text>
-                  <TouchableOpacity onPress={() => handleDeleteTransaction(txn.id)}>
+                  <TouchableOpacity
+                    onPress={() => handleDeleteTransaction(txn.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Remover pagamento"
+                  >
                     <Feather name="trash-2" size={16} color="#9CA3AF" />
                   </TouchableOpacity>
                 </View>
               </View>
             </Card>
-          ))
+          </View>
         )}
-      </View>
-    </ScrollView>
+      />
+    </View>
   );
 }

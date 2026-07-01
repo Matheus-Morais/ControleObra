@@ -52,7 +52,7 @@ export default function RegisterScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-cream"
+      className="flex-1 bg-cream dark:bg-sand-900"
     >
       <ScrollView
         contentContainerStyle={{ flexGrow: 1 }}
@@ -63,10 +63,10 @@ export default function RegisterScreen() {
             <View className="bg-terracotta-500 w-16 h-16 rounded-2xl items-center justify-center mb-4">
               <Feather name="home" size={32} color="#fff" />
             </View>
-            <Text className="text-2xl font-bold text-sand-900">
+            <Text className="text-2xl font-bold text-sand-900 dark:text-sand-50">
               Criar Conta
             </Text>
-            <Text className="text-sand-500 text-base mt-1">
+            <Text className="text-sand-500 dark:text-sand-400 text-base mt-1">
               Comece a gerenciar sua obra
             </Text>
           </View>
@@ -115,8 +115,13 @@ export default function RegisterScreen() {
           />
 
           <View className="flex-row justify-center mt-6">
-            <Text className="text-sand-500">Já tem conta? </Text>
-            <Link href="/(auth)/login" asChild>
+            <Text className="text-sand-500 dark:text-sand-400">Já tem conta? </Text>
+            <Link
+              href="/(auth)/login"
+              asChild
+              accessibilityRole="button"
+              accessibilityLabel="Ir para login"
+            >
               <Text className="text-terracotta-500 font-semibold">
                 Entrar
               </Text>

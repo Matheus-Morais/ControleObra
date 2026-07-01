@@ -5,22 +5,24 @@ import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useProjectStore } from '../../stores/projectStore';
 import { useRealtimeSubscription } from '../../hooks/useRealtime';
+import { useTheme } from '../../hooks/useTheme';
 
 export default function TabLayout() {
   const activeProject = useProjectStore((s) => s.activeProject);
   useRealtimeSubscription(activeProject?.id);
   const insets = useSafeAreaInsets();
   const isAndroid = Platform.OS === 'android';
+  const { colors } = useTheme();
 
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: '#FAFAF8' },
-        headerTintColor: '#33291E',
+        headerStyle: { backgroundColor: colors.headerBg },
+        headerTintColor: colors.textPrimary,
         headerTitleStyle: { fontWeight: '600' },
         tabBarStyle: {
-          backgroundColor: '#FAFAF8',
-          borderTopColor: '#EDE5D6',
+          backgroundColor: colors.headerBg,
+          borderTopColor: colors.border,
           height: (isAndroid ? 62 : 56) + insets.bottom,
           paddingBottom: insets.bottom + (isAndroid ? 2 : 0),
           paddingTop: isAndroid ? 4 : 8,
@@ -30,8 +32,8 @@ export default function TabLayout() {
           justifyContent: 'center',
           paddingVertical: isAndroid ? 2 : 0,
         },
-        tabBarActiveTintColor: '#C1694F',
-        tabBarInactiveTintColor: '#A89270',
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '500',

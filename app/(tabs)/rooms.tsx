@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, TextInput, Keyboard } from 'r
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useProjectStore } from '../../stores/projectStore';
+import { useTheme } from '../../hooks/useTheme';
 import { useRooms, useCreateRoom, useUpdateRoom, useDeleteRoom } from '../../hooks/useRooms';
 import { useProjectItems } from '../../hooks/useItems';
 import { useLoadingTimeout } from '../../hooks/useLoadingTimeout';
@@ -45,6 +46,7 @@ function buildProgressByRoomId(items: Item[]) {
 
 export default function RoomsScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const activeProject = useProjectStore((s) => s.activeProject);
   const { data: rooms, isLoading: roomsLoading, isError: roomsError, refetch: refetchRooms } = useRooms(activeProject?.id);
   const { data: items = [] } = useProjectItems(activeProject?.id);
@@ -178,12 +180,12 @@ export default function RoomsScreen() {
 
   if (roomsError || loadingTimeout) {
     return (
-      <View className="flex-1 items-center justify-center bg-cream p-8">
+      <View className="flex-1 items-center justify-center bg-cream dark:bg-sand-900 p-8">
         <Feather name="alert-circle" size={40} color="#EF4444" />
-        <Text className="text-sand-800 text-lg font-semibold text-center mt-4 mb-2">
+        <Text className="text-sand-800 dark:text-sand-100 text-lg font-semibold text-center mt-4 mb-2">
           {loadingTimeout ? 'Conexão lenta' : 'Erro ao carregar cômodos'}
         </Text>
-        <Text className="text-sand-500 text-sm text-center mb-6">Verifique sua conexão e tente novamente</Text>
+        <Text className="text-sand-500 dark:text-sand-400 text-sm text-center mb-6">Verifique sua conexão e tente novamente</Text>
         <Button title="Tentar novamente" onPress={() => refetchRooms()} size="sm" />
       </View>
     );
@@ -191,7 +193,7 @@ export default function RoomsScreen() {
 
   if (!rooms || rooms.length === 0) {
     return (
-      <View className="flex-1 bg-cream">
+      <View className="flex-1 bg-cream dark:bg-sand-900">
         <EmptyState
           icon="grid"
           title="Nenhum cômodo ainda"
@@ -204,9 +206,9 @@ export default function RoomsScreen() {
   }
 
   return (
-    <View className="flex-1 bg-cream">
+    <View className="flex-1 bg-cream dark:bg-sand-900">
       <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ paddingBottom: 100 }}>
-        <Text className="text-xl font-bold text-sand-900 mb-4">
+        <Text className="text-xl font-bold text-sand-900 dark:text-sand-50 mb-4">
           Cômodos
         </Text>
 
@@ -214,12 +216,12 @@ export default function RoomsScreen() {
         {actionRoom && (
           <View
             style={{
-              backgroundColor: '#fff',
+              backgroundColor: colors.surface,
               borderRadius: 12,
               padding: 16,
               marginBottom: 16,
               borderWidth: 1,
-              borderColor: '#EDE5D6',
+              borderColor: colors.border,
             }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
@@ -233,27 +235,36 @@ export default function RoomsScreen() {
               >
                 <Feather name={actionRoom.icon as any} size={18} color={actionRoom.color} />
               </View>
-              <Text style={{ fontSize: 16, fontWeight: '600', color: '#33291E', flex: 1 }}>
+              <Text style={{ fontSize: 16, fontWeight: '600', color: colors.textPrimary, flex: 1 }}>
                 {actionRoom.name}
               </Text>
-              <TouchableOpacity onPress={() => setActionRoom(null)} style={{ padding: 4 }}>
-                <Feather name="x" size={20} color="#8B7355" />
+              <TouchableOpacity
+                onPress={() => setActionRoom(null)}
+                style={{ padding: 4 }}
+                accessibilityRole="button"
+                accessibilityLabel="Fechar menu"
+              >
+                <Feather name="x" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <TouchableOpacity
                 onPress={handleActionRename}
+                accessibilityRole="button"
+                accessibilityLabel="Renomear cômodo"
                 style={{
                   flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
                   paddingVertical: 10, borderRadius: 8,
-                  backgroundColor: '#F5F0E8',
+                  backgroundColor: colors.inputBg,
                 }}
               >
-                <Feather name="edit-2" size={16} color="#33291E" />
-                <Text style={{ marginLeft: 6, fontWeight: '500', color: '#33291E', fontSize: 14 }}>Renomear</Text>
+                <Feather name="edit-2" size={16} color={colors.textPrimary} />
+                <Text style={{ marginLeft: 6, fontWeight: '500', color: colors.textPrimary, fontSize: 14 }}>Renomear</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleActionDelete}
+                accessibilityRole="button"
+                accessibilityLabel="Excluir cômodo"
                 style={{
                   flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
                   paddingVertical: 10, borderRadius: 8,
@@ -271,16 +282,16 @@ export default function RoomsScreen() {
         {editingRoom && (
           <View
             style={{
-              backgroundColor: '#fff',
+              backgroundColor: colors.surface,
               borderRadius: 12,
               padding: 16,
               marginBottom: 16,
               borderWidth: 1,
-              borderColor: '#EDE5D6',
+              borderColor: colors.border,
             }}
           >
-            <Text style={{ fontSize: 14, fontWeight: '600', color: '#33291E', marginBottom: 8 }}>
-              Renomear "{editingRoom.name}"
+            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textPrimary, marginBottom: 8 }}>
+              Renomear &quot;{editingRoom.name}&quot;
             </Text>
             <TextInput
               autoFocus
@@ -289,32 +300,37 @@ export default function RoomsScreen() {
               onSubmitEditing={handleSaveRename}
               returnKeyType="done"
               placeholder="Novo nome do cômodo"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={colors.placeholder}
               style={{
                 borderWidth: 1,
-                borderColor: '#D6CDB9',
+                borderColor: colors.inputBorder,
                 borderRadius: 8,
                 paddingHorizontal: 12,
                 paddingVertical: 10,
                 fontSize: 16,
-                color: '#33291E',
+                color: colors.textPrimary,
+                backgroundColor: colors.inputBg,
                 marginBottom: 12,
               }}
             />
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
               <TouchableOpacity
                 onPress={() => { setEditingRoom(null); setEditName(''); }}
+                accessibilityRole="button"
+                accessibilityLabel="Cancelar"
                 style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
               >
-                <Text style={{ color: '#8B7355', fontWeight: '500' }}>Cancelar</Text>
+                <Text style={{ color: colors.textSecondary, fontWeight: '500' }}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleSaveRename}
+                accessibilityRole="button"
+                accessibilityLabel="Salvar novo nome"
                 style={{
                   paddingHorizontal: 16,
                   paddingVertical: 8,
                   borderRadius: 8,
-                  backgroundColor: editName.trim() && editName.trim() !== editingRoom.name ? '#B85C38' : '#D6CDB9',
+                  backgroundColor: editName.trim() && editName.trim() !== editingRoom.name ? '#B85C38' : colors.borderStrong,
                 }}
                 disabled={!editName.trim() || editName.trim() === editingRoom.name}
               >
@@ -328,15 +344,15 @@ export default function RoomsScreen() {
         {showAddForm && (
           <View
             style={{
-              backgroundColor: '#fff',
+              backgroundColor: colors.surface,
               borderRadius: 12,
               padding: 16,
               marginBottom: 16,
               borderWidth: 1,
-              borderColor: '#EDE5D6',
+              borderColor: colors.border,
             }}
           >
-            <Text style={{ fontSize: 14, fontWeight: '600', color: '#33291E', marginBottom: 8 }}>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textPrimary, marginBottom: 8 }}>
               Novo Cômodo
             </Text>
             <TextInput
@@ -347,32 +363,37 @@ export default function RoomsScreen() {
               onSubmitEditing={handleAddCustomRoom}
               returnKeyType="done"
               placeholder="Nome do cômodo"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={colors.placeholder}
               style={{
                 borderWidth: 1,
-                borderColor: '#D6CDB9',
+                borderColor: colors.inputBorder,
                 borderRadius: 8,
                 paddingHorizontal: 12,
                 paddingVertical: 10,
                 fontSize: 16,
-                color: '#33291E',
+                color: colors.textPrimary,
+                backgroundColor: colors.inputBg,
                 marginBottom: 12,
               }}
             />
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
               <TouchableOpacity
                 onPress={() => { setShowAddForm(false); setNewRoomName(''); }}
+                accessibilityRole="button"
+                accessibilityLabel="Cancelar"
                 style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
               >
-                <Text style={{ color: '#8B7355', fontWeight: '500' }}>Cancelar</Text>
+                <Text style={{ color: colors.textSecondary, fontWeight: '500' }}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleAddCustomRoom}
+                accessibilityRole="button"
+                accessibilityLabel="Criar cômodo"
                 style={{
                   paddingHorizontal: 16,
                   paddingVertical: 8,
                   borderRadius: 8,
-                  backgroundColor: newRoomName.trim() ? '#B85C38' : '#D6CDB9',
+                  backgroundColor: newRoomName.trim() ? '#B85C38' : colors.borderStrong,
                 }}
                 disabled={!newRoomName.trim()}
               >
@@ -392,6 +413,8 @@ export default function RoomsScreen() {
                 key={room.id}
                 onPress={() => handleRoomPress(room)}
                 onLongPress={() => handleRoomLongPress(room)}
+                accessibilityRole="button"
+                accessibilityLabel={`Abrir cômodo ${room.name}`}
                 className="mb-1"
                 style={{ width: '47%' }}
               >
@@ -405,10 +428,10 @@ export default function RoomsScreen() {
                     color={room.color}
                   />
                 </View>
-                <Text className="text-sand-900 font-semibold text-sm" numberOfLines={1}>
+                <Text className="text-sand-900 dark:text-sand-50 font-semibold text-sm" numberOfLines={1}>
                   {room.name}
                 </Text>
-                <Text className="text-sand-500 text-xs mt-0.5">
+                <Text className="text-sand-500 dark:text-sand-400 text-xs mt-0.5">
                   {progress.total} {progress.total === 1 ? 'item' : 'itens'}
                 </Text>
                 {progress.total > 0 && (
@@ -421,7 +444,7 @@ export default function RoomsScreen() {
                   />
                 )}
                 {progress.budget > 0 && (
-                  <Text className="text-sand-400 text-xs mt-1">
+                  <Text className="text-sand-400 dark:text-sand-500 text-xs mt-1">
                     {formatCurrency(progress.spent)} / {formatCurrency(progress.budget)}
                   </Text>
                 )}

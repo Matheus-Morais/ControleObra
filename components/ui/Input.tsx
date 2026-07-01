@@ -1,5 +1,6 @@
 import React, { forwardRef } from 'react';
 import { View, Text, TextInput, TextInputProps } from 'react-native';
+import { useTheme } from '../../hooks/useTheme';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -9,17 +10,18 @@ interface InputProps extends TextInputProps {
 
 export const Input = forwardRef<TextInput, InputProps>(
   ({ label, error, containerClassName = '', ...props }, ref) => {
+    const { colors } = useTheme();
     return (
       <View className={`mb-4 ${containerClassName}`}>
         {label && (
-          <Text className="text-sand-800 font-medium text-sm mb-1.5">{label}</Text>
+          <Text className="text-sand-800 dark:text-sand-200 font-medium text-sm mb-1.5">{label}</Text>
         )}
         <TextInput
           ref={ref}
-          className={`bg-white border rounded-xl px-4 py-3 text-base text-sand-900 ${
-            error ? 'border-red-500' : 'border-sand-300'
+          className={`bg-white dark:bg-sand-800 border rounded-xl px-4 py-3 text-base text-sand-900 dark:text-sand-50 ${
+            error ? 'border-red-500' : 'border-sand-300 dark:border-sand-600'
           }`}
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={colors.placeholder}
           {...props}
         />
         {error && (
@@ -29,3 +31,5 @@ export const Input = forwardRef<TextInput, InputProps>(
     );
   }
 );
+
+Input.displayName = 'Input';

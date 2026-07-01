@@ -15,9 +15,11 @@ import { useProjectStore } from '../stores/projectStore';
 import { useCreateProject, useJoinProject, useProjects } from '../hooks/useProject';
 import { Button, Input, Card } from '../components/ui';
 import { showAlert } from '../utils/alert';
+import { useTheme } from '../hooks/useTheme';
 
 export default function ProjectSetupScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const user = useAuthStore((s) => s.user);
   const authReady = useAuthStore((s) => !s.isLoading);
   const setActiveProject = useProjectStore((s) => s.setActiveProject);
@@ -108,17 +110,22 @@ export default function ProjectSetupScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-cream"
+      className="flex-1 bg-cream dark:bg-sand-900"
     >
       <Stack.Screen
         options={{
           headerShown: true,
           title: 'Seus Projetos',
-          headerStyle: { backgroundColor: '#FAFAF8' },
-          headerTintColor: '#33291E',
+          headerStyle: { backgroundColor: colors.headerBg },
+          headerTintColor: colors.textPrimary,
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')} style={{ marginLeft: 10, marginRight: 8, padding: 10 }}>
-              <Feather name="arrow-left" size={24} color="#33291E" />
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Voltar"
+              onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')}
+              style={{ marginLeft: 10, marginRight: 8, padding: 10 }}
+            >
+              <Feather name="arrow-left" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
           ),
         }}
@@ -128,19 +135,19 @@ export default function ProjectSetupScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View className="flex-1 px-8 pt-6 pb-8">
-          <Text className="text-sand-500 mb-6">
+          <Text className="text-sand-500 dark:text-sand-400 mb-6">
             Selecione um projeto ou crie um novo
           </Text>
 
           {/* Projects list -- inline loading, never blocks the page */}
           {!authReady ? (
-            <Text style={{ color: '#8B7355', fontSize: 14, marginBottom: 16 }}>
+            <Text style={{ color: colors.textSecondary, fontSize: 14, marginBottom: 16 }}>
               Preparando autenticação...
             </Text>
           ) : isResolvingProjects ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 20, marginBottom: 16 }}>
               <ActivityIndicator size="small" color="#C1694F" />
-              <Text style={{ marginLeft: 8, color: '#8B7355', fontSize: 14 }}>Carregando projetos...</Text>
+              <Text style={{ marginLeft: 8, color: colors.textSecondary, fontSize: 14 }}>Carregando projetos...</Text>
             </View>
           ) : showError ? (
             <View style={{
@@ -162,16 +169,18 @@ export default function ProjectSetupScreen() {
                   key={project.id}
                   onPress={() => selectProject(project)}
                   className="mb-3"
+                  accessibilityRole="button"
+                  accessibilityLabel={`Abrir projeto ${project.name}`}
                 >
                   <View className="flex-row items-center">
-                    <View className="bg-terracotta-100 w-12 h-12 rounded-xl items-center justify-center mr-3">
+                    <View className="bg-terracotta-100 dark:bg-terracotta-900 w-12 h-12 rounded-xl items-center justify-center mr-3">
                       <Feather name="home" size={24} color="#C1694F" />
                     </View>
                     <View className="flex-1">
-                      <Text className="text-sand-900 font-semibold text-base">
+                      <Text className="text-sand-900 dark:text-sand-50 font-semibold text-base">
                         {project.name}
                       </Text>
-                      <Text className="text-sand-500 text-xs mt-0.5">
+                      <Text className="text-sand-500 dark:text-sand-400 text-xs mt-0.5">
                         Código: {project.invite_code}
                       </Text>
                     </View>
@@ -184,9 +193,11 @@ export default function ProjectSetupScreen() {
 
           <View className="flex-row gap-3 mb-6">
             <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Novo projeto"
               onPress={() => setMode('create')}
               className={`flex-1 p-4 rounded-xl border-2 items-center ${
-                mode === 'create' ? 'border-terracotta-500 bg-terracotta-50' : 'border-sand-200 bg-white'
+                mode === 'create' ? 'border-terracotta-500 bg-terracotta-50 dark:bg-terracotta-900' : 'border-sand-200 dark:border-sand-600 bg-white dark:bg-sand-800'
               }`}
             >
               <Feather
@@ -196,7 +207,7 @@ export default function ProjectSetupScreen() {
               />
               <Text
                 className={`mt-2 font-medium ${
-                  mode === 'create' ? 'text-terracotta-500' : 'text-sand-600'
+                  mode === 'create' ? 'text-terracotta-500' : 'text-sand-600 dark:text-sand-300'
                 }`}
               >
                 Novo Projeto
@@ -204,9 +215,11 @@ export default function ProjectSetupScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Entrar com código"
               onPress={() => setMode('join')}
               className={`flex-1 p-4 rounded-xl border-2 items-center ${
-                mode === 'join' ? 'border-terracotta-500 bg-terracotta-50' : 'border-sand-200 bg-white'
+                mode === 'join' ? 'border-terracotta-500 bg-terracotta-50 dark:bg-terracotta-900' : 'border-sand-200 dark:border-sand-600 bg-white dark:bg-sand-800'
               }`}
             >
               <Feather
@@ -216,7 +229,7 @@ export default function ProjectSetupScreen() {
               />
               <Text
                 className={`mt-2 font-medium ${
-                  mode === 'join' ? 'text-terracotta-500' : 'text-sand-600'
+                  mode === 'join' ? 'text-terracotta-500' : 'text-sand-600 dark:text-sand-300'
                 }`}
               >
                 Entrar com Código

@@ -7,6 +7,7 @@ import {
   TextInput,
   Modal,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useItems, useCreateItem, useDeleteItem, useUpdateItemStatus, useProjectItems } from '../../../../../hooks/useItems';
@@ -18,6 +19,7 @@ import { Card, StatusChip, FAB, EmptyState, LoadingScreen, Button, Input } from 
 import { DEFAULT_ROOMS } from '../../../../../constants/rooms';
 import { formatCurrency } from '../../../../../utils/format';
 import { showAlert } from '../../../../../utils/alert';
+import { useTheme } from '../../../../../hooks/useTheme';
 import type { ItemStatus } from '../../../../../types';
 
 const STATUS_FILTERS: { key: ItemStatus | 'all'; label: string }[] = [
@@ -56,6 +58,7 @@ function resolveRoomCategories(roomName: string | undefined): string[] {
 export default function RoomItemsScreen() {
   const { id: projectId, roomId } = useLocalSearchParams<{ id: string; roomId: string }>();
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const activeProject = useProjectStore((s) => s.activeProject);
   const user = useAuthStore((s) => s.user);
   const { data: rooms } = useRooms(activeProject?.id);
@@ -166,16 +169,21 @@ export default function RoomItemsScreen() {
   );
 
   return (
-    <View className="flex-1 bg-cream">
+    <View className="flex-1 bg-cream dark:bg-sand-900">
       <Stack.Screen
         options={{
           headerShown: true,
           title: room?.name ?? 'Itens',
-          headerStyle: { backgroundColor: '#FAFAF8' },
-          headerTintColor: '#33291E',
+          headerStyle: { backgroundColor: colors.headerBg },
+          headerTintColor: colors.textPrimary,
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 8, marginLeft: 10, padding: 10 }}>
-              <Feather name="arrow-left" size={24} color="#33291E" />
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Voltar"
+              onPress={() => router.back()}
+              style={{ marginRight: 8, marginLeft: 10, padding: 10 }}
+            >
+              <Feather name="arrow-left" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
           ),
         }}
@@ -191,22 +199,24 @@ export default function RoomItemsScreen() {
         {STATUS_FILTERS.map((f) => (
           <TouchableOpacity
             key={f.key}
+            accessibilityRole="button"
+            accessibilityLabel={`Filtrar por ${f.label}`}
             onPress={() => setStatusFilter(f.key)}
             style={{
               paddingHorizontal: 16,
               paddingVertical: 8,
               borderRadius: 20,
               marginRight: 8,
-              backgroundColor: statusFilter === f.key ? '#B85C38' : '#FFFFFF',
+              backgroundColor: statusFilter === f.key ? '#B85C38' : colors.surface,
               borderWidth: statusFilter === f.key ? 0 : 1,
-              borderColor: '#EDE5D6',
+              borderColor: colors.border,
             }}
           >
             <Text
               style={{
                 fontSize: 14,
                 fontWeight: '500',
-                color: statusFilter === f.key ? '#FFFFFF' : '#8B7355',
+                color: statusFilter === f.key ? '#FFFFFF' : colors.textSecondary,
               }}
             >
               {f.label}
@@ -220,129 +230,139 @@ export default function RoomItemsScreen() {
       ) : isError || loadingTimeout ? (
         <View className="flex-1 items-center justify-center p-8">
           <Feather name="alert-circle" size={40} color="#EF4444" />
-          <Text className="text-sand-800 text-lg font-semibold text-center mt-4 mb-2">
+          <Text className="text-sand-800 dark:text-sand-100 text-lg font-semibold text-center mt-4 mb-2">
             {loadingTimeout ? 'Conexão lenta' : 'Erro ao carregar itens'}
           </Text>
-          <Text className="text-sand-500 text-sm text-center mb-6">Verifique sua conexão e tente novamente</Text>
+          <Text className="text-sand-500 dark:text-sand-400 text-sm text-center mb-6">Verifique sua conexão e tente novamente</Text>
           <Button title="Tentar novamente" onPress={() => refetch()} size="sm" />
         </View>
       ) : (
-        <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100, flexGrow: 1 }}>
-          {filteredItems.length === 0 && !showAddForm ? (
-            <View className="flex-1 items-center justify-center p-8">
-              <View className="bg-sand-100 rounded-full p-6 mb-4">
-                <Feather name="package" size={40} color="#A89270" />
-              </View>
-              <Text className="text-sand-800 text-lg font-semibold text-center mb-2">Nenhum item</Text>
-              <Text className="text-sand-500 text-sm text-center mb-6">Adicione itens para este cômodo</Text>
-              <Button title="Adicionar Item" onPress={() => setShowAddForm(true)} size="sm" />
-            </View>
-          ) : null}
-
-          {/* Add form */}
-          {showAddForm && (
-            <View className="px-4 mb-4">
-              <Card>
-                <Text className="text-sand-900 font-semibold mb-3">Novo Item</Text>
-                <Input
-                  label="Nome do item"
-                  placeholder="Ex: Chuveiro, Piso, Geladeira"
-                  value={newItemName}
-                  onChangeText={setNewItemName}
-                />
-                <View className="mb-3">
-                  <Text className="text-sand-800 font-medium text-sm mb-2">Categoria</Text>
-                  <TouchableOpacity
-                    onPress={openCategorySheet}
-                    style={{
-                      borderWidth: 1,
-                      borderColor: '#D6CDB9',
-                      borderRadius: 10,
-                      paddingHorizontal: 12,
-                      paddingVertical: 12,
-                      backgroundColor: '#fff',
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                    }}
-                  >
-                    <Text style={{ color: newItemCategory ? '#33291E' : '#8B7355', fontSize: 14 }}>
-                      {newItemCategory || 'Selecionar categoria'}
-                    </Text>
-                    <Feather name="chevron-down" size={16} color="#8B7355" />
-                  </TouchableOpacity>
-                </View>
-                <View className="flex-row gap-3">
-                  <Button
-                    title="Cancelar"
-                    onPress={() => setShowAddForm(false)}
-                    variant="ghost"
-                    size="sm"
-                    className="flex-1"
-                  />
-                  <Button
-                    title="Adicionar"
-                    onPress={handleAddItem}
-                    size="sm"
-                    loading={createItem.isPending}
-                    className="flex-1"
-                  />
-                </View>
-              </Card>
-            </View>
-          )}
-
-          {/* Items list */}
-          <View className="px-4">
-            {filteredItems.map((item) => (
-              <Card
-                key={item.id}
-                onPress={() =>
-                  router.push(`/project/${projectId}/room/${roomId}/item/${item.id}`)
-                }
-                className="mb-3"
-              >
-                <View className="flex-row items-start justify-between">
-                  <View className="flex-1 mr-3">
-                    <Text className="text-sand-900 font-semibold text-base">
-                      {item.name}
-                    </Text>
-                    <View
-                      style={{
-                        alignSelf: 'flex-start',
-                        backgroundColor: '#F5F0E8',
-                        borderColor: '#D6CDB9',
-                        borderWidth: 1,
-                        borderRadius: 999,
-                        paddingHorizontal: 10,
-                        paddingVertical: 3,
-                        marginTop: 6,
-                      }}
-                    >
-                      <Text style={{ color: '#6F5A3B', fontSize: 11, fontWeight: '600' }}>
-                        Categoria: {item.category}
-                      </Text>
+        <View style={{ flex: 1 }}>
+          <FlashList
+            data={filteredItems}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{ paddingBottom: 100 }}
+            ListHeaderComponent={
+              showAddForm ? (
+                <View className="px-4 mb-4">
+                  <Card>
+                    <Text className="text-sand-900 dark:text-sand-50 font-semibold mb-3">Novo Item</Text>
+                    <Input
+                      label="Nome do item"
+                      placeholder="Ex: Chuveiro, Piso, Geladeira"
+                      value={newItemName}
+                      onChangeText={setNewItemName}
+                    />
+                    <View className="mb-3">
+                      <Text className="text-sand-800 dark:text-sand-100 font-medium text-sm mb-2">Categoria</Text>
+                      <TouchableOpacity
+                        accessibilityRole="button"
+                        accessibilityLabel="Selecionar categoria"
+                        onPress={openCategorySheet}
+                        style={{
+                          borderWidth: 1,
+                          borderColor: colors.inputBorder,
+                          borderRadius: 10,
+                          paddingHorizontal: 12,
+                          paddingVertical: 12,
+                          backgroundColor: colors.inputBg,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                        }}
+                      >
+                        <Text style={{ color: newItemCategory ? colors.textPrimary : colors.textSecondary, fontSize: 14 }}>
+                          {newItemCategory || 'Selecionar categoria'}
+                        </Text>
+                        <Feather name="chevron-down" size={16} color={colors.textSecondary} />
+                      </TouchableOpacity>
                     </View>
-                    {item.budget > 0 && (
-                      <Text className="text-sand-600 text-sm mt-1">
-                        {formatCurrency(item.budget)}
-                      </Text>
-                    )}
-                  </View>
-                  <View className="items-end">
-                    <StatusChip status={item.status} size="sm" />
-                    <TouchableOpacity
-                      onPress={() => handleDeleteItem(item.id)}
-                      className="mt-2 p-1"
-                    >
-                      <Feather name="trash-2" size={16} color="#9CA3AF" />
-                    </TouchableOpacity>
-                  </View>
+                    <View className="flex-row gap-3">
+                      <Button
+                        title="Cancelar"
+                        onPress={() => setShowAddForm(false)}
+                        variant="ghost"
+                        size="sm"
+                        className="flex-1"
+                      />
+                      <Button
+                        title="Adicionar"
+                        onPress={handleAddItem}
+                        size="sm"
+                        loading={createItem.isPending}
+                        className="flex-1"
+                      />
+                    </View>
+                  </Card>
                 </View>
-              </Card>
-            ))}
-          </View>
-        </ScrollView>
+              ) : null
+            }
+            ListEmptyComponent={
+              !showAddForm ? (
+                <View className="items-center justify-center p-8 mt-16">
+                  <View className="bg-sand-100 dark:bg-sand-800 rounded-full p-6 mb-4">
+                    <Feather name="package" size={40} color="#A89270" />
+                  </View>
+                  <Text className="text-sand-800 dark:text-sand-100 text-lg font-semibold text-center mb-2">Nenhum item</Text>
+                  <Text className="text-sand-500 dark:text-sand-400 text-sm text-center mb-6">Adicione itens para este cômodo</Text>
+                  <Button title="Adicionar Item" onPress={() => setShowAddForm(true)} size="sm" />
+                </View>
+              ) : null
+            }
+            renderItem={({ item }) => (
+              <View className="px-4">
+                <Card
+                  onPress={() =>
+                    router.push(`/project/${projectId}/room/${roomId}/item/${item.id}`)
+                  }
+                  className="mb-3"
+                  accessibilityRole="button"
+                  accessibilityLabel={`Abrir item ${item.name}`}
+                >
+                  <View className="flex-row items-start justify-between">
+                    <View className="flex-1 mr-3">
+                      <Text className="text-sand-900 dark:text-sand-50 font-semibold text-base">
+                        {item.name}
+                      </Text>
+                      <View
+                        style={{
+                          alignSelf: 'flex-start',
+                          backgroundColor: colors.surfaceAlt,
+                          borderColor: colors.border,
+                          borderWidth: 1,
+                          borderRadius: 999,
+                          paddingHorizontal: 10,
+                          paddingVertical: 3,
+                          marginTop: 6,
+                        }}
+                      >
+                        <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '600' }}>
+                          Categoria: {item.category}
+                        </Text>
+                      </View>
+                      {item.budget > 0 && (
+                        <Text className="text-sand-600 dark:text-sand-300 text-sm mt-1">
+                          {formatCurrency(item.budget)}
+                        </Text>
+                      )}
+                    </View>
+                    <View className="items-end">
+                      <StatusChip status={item.status} size="sm" />
+                      <TouchableOpacity
+                        accessibilityRole="button"
+                        accessibilityLabel={`Remover item ${item.name}`}
+                        onPress={() => handleDeleteItem(item.id)}
+                        className="mt-2 p-1"
+                      >
+                        <Feather name="trash-2" size={16} color="#9CA3AF" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </Card>
+              </View>
+            )}
+          />
+        </View>
       )}
 
       {!showAddForm && filteredItems.length > 0 && (
@@ -355,11 +375,11 @@ export default function RoomItemsScreen() {
         animationType="slide"
         onRequestClose={closeCategorySheet}
       >
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'flex-end' }}>
+        <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closeCategorySheet} />
           <View
             style={{
-              backgroundColor: '#FAFAF8',
+              backgroundColor: colors.surface,
               borderTopLeftRadius: 16,
               borderTopRightRadius: 16,
               paddingHorizontal: 16,
@@ -369,9 +389,9 @@ export default function RoomItemsScreen() {
             }}
           >
             <View style={{ alignItems: 'center', marginBottom: 8 }}>
-              <View style={{ width: 44, height: 4, borderRadius: 2, backgroundColor: '#D6CDB9' }} />
+              <View style={{ width: 44, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
             </View>
-            <Text style={{ fontSize: 16, fontWeight: '600', color: '#33291E', marginBottom: 12 }}>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: colors.textPrimary, marginBottom: 12 }}>
               Selecionar categoria
             </Text>
 
@@ -379,17 +399,17 @@ export default function RoomItemsScreen() {
               value={categorySearch}
               onChangeText={setCategorySearch}
               placeholder="Pesquisar categoria"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={colors.placeholder}
               style={{
                 borderWidth: 1,
-                borderColor: '#D6CDB9',
+                borderColor: colors.inputBorder,
                 borderRadius: 10,
                 paddingHorizontal: 12,
                 paddingVertical: 10,
                 marginBottom: 10,
-                color: '#33291E',
+                color: colors.textPrimary,
                 fontSize: 14,
-                backgroundColor: '#fff',
+                backgroundColor: colors.inputBg,
               }}
             />
 
@@ -397,29 +417,31 @@ export default function RoomItemsScreen() {
               {filteredCategories.map((cat) => (
                 <TouchableOpacity
                   key={cat}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Categoria ${cat}`}
                   onPress={() => handleSelectCategory(cat)}
                   style={{
                     paddingVertical: 10,
                     paddingHorizontal: 12,
                     borderRadius: 10,
                     marginBottom: 6,
-                    backgroundColor: newItemCategory === cat ? '#DDE9D8' : '#FFFFFF',
+                    backgroundColor: newItemCategory === cat ? (isDark ? '#2F3D2A' : '#DDE9D8') : colors.surface,
                     borderWidth: 1,
-                    borderColor: newItemCategory === cat ? '#5B7553' : '#EDE5D6',
+                    borderColor: newItemCategory === cat ? '#5B7553' : colors.border,
                   }}
                 >
-                  <Text style={{ color: '#33291E', fontWeight: '500', fontSize: 14 }}>{cat}</Text>
+                  <Text style={{ color: colors.textPrimary, fontWeight: '500', fontSize: 14 }}>{cat}</Text>
                 </TouchableOpacity>
               ))}
               {filteredCategories.length === 0 && (
-                <Text style={{ color: '#8B7355', fontSize: 13, textAlign: 'center', marginVertical: 12 }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 13, textAlign: 'center', marginVertical: 12 }}>
                   Nenhuma categoria encontrada.
                 </Text>
               )}
             </ScrollView>
 
             <View style={{ marginTop: 8 }}>
-              <Text style={{ color: '#33291E', fontWeight: '600', fontSize: 13, marginBottom: 6 }}>
+              <Text style={{ color: colors.textPrimary, fontWeight: '600', fontSize: 13, marginBottom: 6 }}>
                 Adicionar categoria
               </Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -427,27 +449,29 @@ export default function RoomItemsScreen() {
                   value={newCategoryName}
                   onChangeText={setNewCategoryName}
                   placeholder="Nova categoria"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={colors.placeholder}
                   style={{
                     flex: 1,
                     borderWidth: 1,
-                    borderColor: '#D6CDB9',
+                    borderColor: colors.inputBorder,
                     borderRadius: 10,
                     paddingHorizontal: 12,
                     paddingVertical: 10,
-                    color: '#33291E',
+                    color: colors.textPrimary,
                     fontSize: 14,
-                    backgroundColor: '#fff',
+                    backgroundColor: colors.inputBg,
                   }}
                 />
                 <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Adicionar categoria"
                   onPress={handleAddCustomCategory}
                   disabled={!newCategoryName.trim()}
                   style={{
                     paddingHorizontal: 12,
                     paddingVertical: 10,
                     borderRadius: 10,
-                    backgroundColor: newCategoryName.trim() ? '#B85C38' : '#D6CDB9',
+                    backgroundColor: newCategoryName.trim() ? '#B85C38' : colors.border,
                   }}
                 >
                   <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Adicionar</Text>

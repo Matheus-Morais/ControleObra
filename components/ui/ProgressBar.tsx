@@ -23,9 +23,9 @@ export function ProgressBar({
   return (
     <View className={`${className}`}>
       {showLabel && (
-        <Text className="text-sand-600 text-xs mb-1">{Math.round(clampedProgress)}%</Text>
+        <Text className="text-sand-600 dark:text-sand-400 text-xs mb-1">{Math.round(clampedProgress)}%</Text>
       )}
-      <View className="bg-sand-100 rounded-full overflow-hidden" style={{ height }}>
+      <View className="bg-sand-100 dark:bg-sand-700 rounded-full overflow-hidden" style={{ height }}>
         <View
           className={`${barColor ? '' : color} rounded-full h-full`}
           style={{

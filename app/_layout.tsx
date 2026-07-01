@@ -9,6 +9,8 @@ import { Feather } from '@expo/vector-icons';
 import { supabase } from '../services/supabase';
 import { useAuthStore } from '../stores/authStore';
 import { useProjectStore } from '../stores/projectStore';
+import { useThemeStore } from '../stores/themeStore';
+import { useApplyThemePreference, useTheme } from '../hooks/useTheme';
 import { getProfile } from '../services/auth';
 import { LoadingScreen, ErrorBoundary } from '../components/ui';
 
@@ -52,6 +54,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const authError = useAuthStore((s) => s.authError);
   const segments = useSegments();
   const router = useRouter();
+  const { colors } = useTheme();
 
   useEffect(() => {
     if (isLoading) return;
@@ -76,14 +79,14 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
           flex: 1,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#FAFAF8',
+          backgroundColor: colors.background,
           padding: 32,
         }}
       >
-        <Feather name="wifi-off" size={48} color="#EF4444" />
+        <Feather name="wifi-off" size={48} color={colors.danger} />
         <Text
           style={{
-            color: '#33291E',
+            color: colors.textPrimary,
             fontSize: 18,
             fontWeight: '600',
             textAlign: 'center',
@@ -95,7 +98,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
         </Text>
         <Text
           style={{
-            color: '#8B7355',
+            color: colors.textSecondary,
             fontSize: 14,
             textAlign: 'center',
             marginBottom: 24,
@@ -110,7 +113,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
             initializeAuth();
           }}
           style={{
-            backgroundColor: '#C1694F',
+            backgroundColor: colors.accent,
             paddingHorizontal: 24,
             paddingVertical: 12,
             borderRadius: 10,
@@ -183,7 +186,14 @@ async function initializeAuth() {
 export default function RootLayout() {
   const initDoneRef = useRef(false);
 
+  useApplyThemePreference();
+
   useEffect(() => {
+    // Restaura o projeto ativo e a preferência de tema persistidos
+    // (no nativo a leitura é assíncrona).
+    useProjectStore.getState().hydrate();
+    useThemeStore.getState().hydrate();
+
     initializeAuth().then(() => {
       initDoneRef.current = true;
     });
@@ -236,7 +246,7 @@ export default function RootLayout() {
             </Stack>
           </AuthGuard>
         </ErrorBoundary>
-        <StatusBar style="dark" />
+        <StatusBar style="auto" />
       </GestureHandlerRootView>
     </QueryClientProvider>
   );

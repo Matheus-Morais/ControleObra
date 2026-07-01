@@ -14,14 +14,14 @@ import type { Item, ItemStatus } from '../../types';
 
 function StatusSummaryCard({ icon, label, count, color }: { icon: string; label: string; count: number; color: string }) {
   return (
-    <View className="bg-white rounded-xl p-3 border border-sand-100 flex-1" style={{ minWidth: '45%' }}>
+    <View className="bg-white dark:bg-sand-800 rounded-xl p-3 border border-sand-100 dark:border-sand-700 flex-1" style={{ minWidth: '45%' }}>
       <View className="flex-row items-center mb-1">
         <View className="w-8 h-8 rounded-lg items-center justify-center mr-2" style={{ backgroundColor: color + '20' }}>
           <Feather name={icon as any} size={16} color={color} />
         </View>
-        <Text className="text-sand-500 text-xs">{label}</Text>
+        <Text className="text-sand-500 dark:text-sand-400 text-xs">{label}</Text>
       </View>
-      <Text className="text-sand-900 text-2xl font-bold">{count}</Text>
+      <Text className="text-sand-900 dark:text-sand-50 text-2xl font-bold">{count}</Text>
     </View>
   );
 }
@@ -80,39 +80,39 @@ export default function DashboardScreen() {
 
   if (isError || loadingTimeout) {
     return (
-      <View className="flex-1 items-center justify-center bg-cream p-8">
+      <View className="flex-1 items-center justify-center bg-cream dark:bg-sand-900 p-8">
         <Feather name="alert-circle" size={40} color="#EF4444" />
-        <Text className="text-sand-800 text-lg font-semibold text-center mt-4 mb-2">
+        <Text className="text-sand-800 dark:text-sand-100 text-lg font-semibold text-center mt-4 mb-2">
           {loadingTimeout ? 'Conexão lenta' : 'Erro ao carregar dados'}
         </Text>
-        <Text className="text-sand-500 text-sm text-center mb-6">Verifique sua conexão e tente novamente</Text>
+        <Text className="text-sand-500 dark:text-sand-400 text-sm text-center mb-6">Verifique sua conexão e tente novamente</Text>
         <Button title="Tentar novamente" onPress={() => refetch()} size="sm" />
       </View>
     );
   }
 
   return (
-    <ScrollView className="flex-1 bg-cream" contentContainerStyle={{ paddingBottom: 30 }}>
+    <ScrollView className="flex-1 bg-cream dark:bg-sand-900" contentContainerStyle={{ paddingBottom: 30 }}>
       <View className="px-4 pt-6 pb-2">
-        <Text className="text-sand-500 text-base">
+        <Text className="text-sand-500 dark:text-sand-400 text-base">
           Olá, {profile?.full_name?.split(' ')[0] ?? 'Usuário'}
         </Text>
-        <Text className="text-sand-900 text-xl font-bold">{activeProject.name}</Text>
+        <Text className="text-sand-900 dark:text-sand-50 text-xl font-bold">{activeProject.name}</Text>
       </View>
 
       {/* Financial summary */}
       <View className="px-4 mt-4">
         <Card>
-          <Text className="text-sand-700 font-semibold mb-3">Resumo Financeiro</Text>
+          <Text className="text-sand-700 dark:text-sand-200 font-semibold mb-3">Resumo Financeiro</Text>
           <View className="flex-row justify-between mb-2">
             <View>
-              <Text className="text-sand-500 text-xs">Orçamento Total</Text>
-              <Text className="text-sand-900 text-xl font-bold">
+              <Text className="text-sand-500 dark:text-sand-400 text-xs">Orçamento Total</Text>
+              <Text className="text-sand-900 dark:text-sand-50 text-xl font-bold">
                 {formatCurrency(Number(activeProject.total_budget) || stats.totalBudget)}
               </Text>
             </View>
             <View className="items-end">
-              <Text className="text-sand-500 text-xs">Total Gasto</Text>
+              <Text className="text-sand-500 dark:text-sand-400 text-xs">Total Gasto</Text>
               <Text className="text-terracotta-500 text-xl font-bold">
                 {formatCurrency(totalSpent)}
               </Text>
@@ -130,11 +130,11 @@ export default function DashboardScreen() {
       <View className="px-4 mt-4">
         <Card>
           <View className="flex-row items-center justify-between mb-2">
-            <Text className="text-sand-700 font-semibold">Progresso Geral</Text>
-            <Text className="text-sand-900 font-bold text-lg">{overallProgress}%</Text>
+            <Text className="text-sand-700 dark:text-sand-200 font-semibold">Progresso Geral</Text>
+            <Text className="text-sand-900 dark:text-sand-50 font-bold text-lg">{overallProgress}%</Text>
           </View>
           <ProgressBar progress={overallProgress} color="bg-moss-500" showLabel={false} />
-          <Text className="text-sand-500 text-xs mt-2">
+          <Text className="text-sand-500 dark:text-sand-400 text-xs mt-2">
             {stats.purchased + stats.installed} de {stats.total} itens concluídos
           </Text>
         </Card>
@@ -151,17 +151,17 @@ export default function DashboardScreen() {
       {/* Budget by room chart */}
       {roomBudgets.length > 0 && (
         <View className="px-4 mt-6">
-          <Text className="text-sand-900 font-bold text-base mb-3">Gastos por Cômodo</Text>
+          <Text className="text-sand-900 dark:text-sand-50 font-bold text-base mb-3">Gastos por Cômodo</Text>
           {roomBudgets.slice(0, 6).map((room) => {
             const maxBudget = Math.max(...roomBudgets.map((r) => r.budget), 1);
             const barWidth = formatPercentage(room.budget, maxBudget);
             return (
               <View key={room.id} className="mb-3">
                 <View className="flex-row items-center justify-between mb-1">
-                  <Text className="text-sand-700 text-sm">{room.name}</Text>
-                  <Text className="text-sand-500 text-xs">{formatCurrency(room.budget)}</Text>
+                  <Text className="text-sand-700 dark:text-sand-200 text-sm">{room.name}</Text>
+                  <Text className="text-sand-500 dark:text-sand-400 text-xs">{formatCurrency(room.budget)}</Text>
                 </View>
-                <View className="bg-sand-100 rounded-full h-3 overflow-hidden">
+                <View className="bg-sand-100 dark:bg-sand-800 rounded-full h-3 overflow-hidden">
                   <View
                     className="h-full rounded-full"
                     style={{ width: `${barWidth}%`, backgroundColor: room.color }}
@@ -176,18 +176,20 @@ export default function DashboardScreen() {
       {/* Recent activity */}
       {recentItems.length > 0 && (
         <View className="px-4 mt-6">
-          <Text className="text-sand-900 font-bold text-base mb-3">Atividade Recente</Text>
+          <Text className="text-sand-900 dark:text-sand-50 font-bold text-base mb-3">Atividade Recente</Text>
           {recentItems.map((item) => (
             <TouchableOpacity
               key={item.id}
-              className="bg-white rounded-xl p-3 mb-2 border border-sand-100 flex-row items-center"
+              accessibilityRole="button"
+              accessibilityLabel={`Abrir item ${item.name}`}
+              className="bg-white dark:bg-sand-800 rounded-xl p-3 mb-2 border border-sand-100 dark:border-sand-700 flex-row items-center"
               onPress={() => {
                 router.push(`/project/${activeProject.id}/room/${item.room_id}/item/${item.id}`);
               }}
             >
               <View className="flex-1 mr-3">
-                <Text className="text-sand-900 font-medium text-sm">{item.name}</Text>
-                <Text className="text-sand-400 text-xs mt-0.5">
+                <Text className="text-sand-900 dark:text-sand-50 font-medium text-sm">{item.name}</Text>
+                <Text className="text-sand-400 dark:text-sand-500 text-xs mt-0.5">
                   {item.category} · {formatDateTime(item.updated_at)}
                 </Text>
               </View>

@@ -1,5 +1,8 @@
 import React from 'react';
-import { TouchableOpacity, Text, ActivityIndicator, View } from 'react-native';
+import { Text, ActivityIndicator, View, Pressable } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 interface ButtonProps {
   title: string;
@@ -22,6 +25,9 @@ export function Button({
   icon,
   className = '',
 }: ButtonProps) {
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
   const baseStyles = 'flex-row items-center justify-center rounded-xl';
 
   const variantStyles = {
@@ -34,8 +40,8 @@ export function Button({
   const textVariantStyles = {
     primary: 'text-white font-semibold',
     secondary: 'text-white font-semibold',
-    outline: 'text-terracotta-500 font-semibold',
-    ghost: 'text-terracotta-500 font-medium',
+    outline: 'text-terracotta-500 dark:text-terracotta-400 font-semibold',
+    ghost: 'text-terracotta-500 dark:text-terracotta-400 font-medium',
   };
 
   const sizeStyles = {
@@ -50,12 +56,23 @@ export function Button({
     lg: 'text-lg',
   };
 
+  const isDisabled = disabled || loading;
+
   return (
-    <TouchableOpacity
+    <AnimatedPressable
       onPress={onPress}
-      disabled={disabled || loading}
-      className={`${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${disabled ? 'opacity-50' : ''} ${className}`}
-      activeOpacity={0.7}
+      onPressIn={() => {
+        scale.value = withTiming(0.96, { duration: 90 });
+      }}
+      onPressOut={() => {
+        scale.value = withTiming(1, { duration: 130 });
+      }}
+      disabled={isDisabled}
+      style={animatedStyle}
+      className={`${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${isDisabled ? 'opacity-50' : ''} ${className}`}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
     >
       {loading ? (
         <ActivityIndicator color={variant === 'primary' || variant === 'secondary' ? '#fff' : '#C1694F'} />
@@ -65,6 +82,6 @@ export function Button({
           <Text className={`${textVariantStyles[variant]} ${textSizeStyles[size]}`}>{title}</Text>
         </View>
       )}
-    </TouchableOpacity>
+    </AnimatedPressable>
   );
 }
