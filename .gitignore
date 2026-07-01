@@ -21,3 +21,6 @@ ios/
 android/
 
 .vercel
+
+# Wiki / documentacao local (nao versionada)
+wiki/
