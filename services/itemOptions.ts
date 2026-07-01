@@ -1,5 +1,11 @@
 import type { ItemOption, ItemOptionPhoto } from '../types';
 import { supabase } from './supabase';
+import {
+  ItemOptionSchema,
+  ItemOptionPhotoSchema,
+  ItemOptionWithPhotosSchema,
+  validate,
+} from './schemas';
 
 export type ItemOptionWithPhotos = ItemOption & {
   item_option_photos: ItemOptionPhoto[];
@@ -13,7 +19,7 @@ export async function getItemOptions(itemId: string): Promise<ItemOptionWithPhot
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return (data ?? []) as ItemOptionWithPhotos[];
+  return validate(ItemOptionWithPhotosSchema.array(), data ?? [], 'item-options');
 }
 
 export async function createItemOption(
@@ -22,7 +28,7 @@ export async function createItemOption(
   const { data, error } = await supabase.from('item_options').insert(option).select().single();
 
   if (error) throw error;
-  return data as ItemOption;
+  return validate(ItemOptionSchema, data, 'createItemOption');
 }
 
 export async function updateItemOption(
@@ -37,7 +43,7 @@ export async function updateItemOption(
     .single();
 
   if (error) throw error;
-  return data as ItemOption;
+  return validate(ItemOptionSchema, data, 'updateItemOption');
 }
 
 export async function chooseOption(itemId: string, optionId: string): Promise<ItemOption> {
@@ -56,7 +62,7 @@ export async function chooseOption(itemId: string, optionId: string): Promise<It
     .single();
 
   if (error) throw error;
-  return data as ItemOption;
+  return validate(ItemOptionSchema, data, 'chooseOption');
 }
 
 export async function deleteItemOption(optionId: string): Promise<void> {
@@ -76,7 +82,7 @@ export async function addOptionPhoto(
     .single();
 
   if (error) throw error;
-  return data as ItemOptionPhoto;
+  return validate(ItemOptionPhotoSchema, data, 'addOptionPhoto');
 }
 
 export async function deleteOptionPhoto(photoId: string): Promise<void> {

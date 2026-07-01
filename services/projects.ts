@@ -1,21 +1,48 @@
 import { generateInviteCode } from '../utils/format';
 import type { Profile, Project, ProjectMember } from '../types';
 import { supabase } from './supabase';
+import { ProjectMemberWithProfileSchema, ProjectSchema, validate } from './schemas';
 
 interface ProjectMemberIdRow {
   project_id: string;
 }
 
+/** Nº de tentativas ao gerar o invite_code, cobrindo colisão de código único. */
+const INVITE_CODE_MAX_ATTEMPTS = 5;
+
+/** Detecta violação de unicidade (23505) especificamente no campo invite_code. */
+function isInviteCodeCollision(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const e = error as { code?: string; message?: string; details?: string };
+  if (e.code !== '23505') return false;
+  const haystack = `${e.message ?? ''} ${e.details ?? ''}`.toLowerCase();
+  return haystack.includes('invite_code');
+}
+
 export async function createProject(name: string, userId: string): Promise<Project> {
-  const inviteCode = generateInviteCode();
+  let project: Project | null = null;
 
-  const { data: project, error: projectError } = await supabase
-    .from('projects')
-    .insert({ name, created_by: userId, invite_code: inviteCode })
-    .select()
-    .single();
+  for (let attempt = 0; attempt < INVITE_CODE_MAX_ATTEMPTS; attempt++) {
+    const inviteCode = generateInviteCode();
 
-  if (projectError) throw projectError;
+    const { data, error: projectError } = await supabase
+      .from('projects')
+      .insert({ name, created_by: userId, invite_code: inviteCode })
+      .select()
+      .single();
+
+    if (!projectError) {
+      project = validate(ProjectSchema, data, 'createProject');
+      break;
+    }
+
+    // Colisão de código: gera outro e tenta de novo. Qualquer outro erro propaga.
+    if (isInviteCodeCollision(projectError) && attempt < INVITE_CODE_MAX_ATTEMPTS - 1) {
+      continue;
+    }
+    throw projectError;
+  }
+
   if (!project) throw new Error('Projeto não retornado após criação');
 
   const { error: memberError } = await supabase.from('project_members').insert({
@@ -26,16 +53,18 @@ export async function createProject(name: string, userId: string): Promise<Proje
 
   if (memberError) throw memberError;
 
-  return project as Project;
+  return project;
 }
 
 export async function joinProject(inviteCode: string, userId: string): Promise<Project> {
   const { data, error: findError } = await supabase
     .rpc('find_project_by_invite_code', { code: inviteCode });
 
-  const project = Array.isArray(data) ? data[0] : data;
+  const rawProject = Array.isArray(data) ? data[0] : data;
 
-  if (findError || !project) throw new Error('Código de convite inválido');
+  if (findError || !rawProject) throw new Error('Código de convite inválido');
+
+  const project = validate(ProjectSchema, rawProject, 'joinProject');
 
   const { error: joinError } = await supabase.from('project_members').insert({
     project_id: project.id,
@@ -50,7 +79,7 @@ export async function joinProject(inviteCode: string, userId: string): Promise<P
     throw joinError;
   }
 
-  return project as Project;
+  return project;
 }
 
 export async function getUserProjects(userId: string): Promise<Project[]> {
@@ -70,7 +99,7 @@ export async function getUserProjects(userId: string): Promise<Project[]> {
     .in('id', ids);
 
   if (projectsError) throw projectsError;
-  return (projects ?? []) as Project[];
+  return validate(ProjectSchema.array(), projects ?? [], 'user-projects');
 }
 
 export async function getProjectMembers(
@@ -82,7 +111,7 @@ export async function getProjectMembers(
     .eq('project_id', projectId);
 
   if (error) throw error;
-  return (data ?? []) as (ProjectMember & { profiles: Profile | null })[];
+  return validate(ProjectMemberWithProfileSchema.array(), data ?? [], 'project-members');
 }
 
 export async function updateProject(
@@ -97,7 +126,7 @@ export async function updateProject(
     .single();
 
   if (error) throw error;
-  return data as Project;
+  return validate(ProjectSchema, data, 'updateProject');
 }
 
 export async function deleteProject(projectId: string): Promise<void> {

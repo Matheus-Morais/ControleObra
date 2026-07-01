@@ -1,5 +1,6 @@
 import type { Room } from '../types';
 import { supabase } from './supabase';
+import { RoomSchema, validate } from './schemas';
 
 export async function getRooms(projectId: string): Promise<Room[]> {
   const { data, error } = await supabase
@@ -9,14 +10,14 @@ export async function getRooms(projectId: string): Promise<Room[]> {
     .order('sort_order', { ascending: true });
 
   if (error) throw error;
-  return (data ?? []) as Room[];
+  return validate(RoomSchema.array(), data ?? [], 'rooms');
 }
 
 export async function createRoom(room: Omit<Room, 'id' | 'created_at'>): Promise<Room> {
   const { data, error } = await supabase.from('rooms').insert(room).select().single();
 
   if (error) throw error;
-  return data as Room;
+  return validate(RoomSchema, data, 'createRoom');
 }
 
 export async function updateRoom(
@@ -31,7 +32,7 @@ export async function updateRoom(
     .single();
 
   if (error) throw error;
-  return data as Room;
+  return validate(RoomSchema, data, 'updateRoom');
 }
 
 export async function deleteRoom(roomId: string): Promise<void> {

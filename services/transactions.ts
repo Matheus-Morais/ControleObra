@@ -1,5 +1,6 @@
 import type { Transaction } from '../types';
 import { supabase } from './supabase';
+import { AmountRowSchema, TransactionSchema, validate } from './schemas';
 
 export async function getTransactions(projectId: string): Promise<Transaction[]> {
   const { data, error } = await supabase
@@ -9,7 +10,7 @@ export async function getTransactions(projectId: string): Promise<Transaction[]>
     .order('paid_at', { ascending: false });
 
   if (error) throw error;
-  return (data ?? []) as Transaction[];
+  return validate(TransactionSchema.array(), data ?? [], 'transactions');
 }
 
 export async function createTransaction(
@@ -22,7 +23,7 @@ export async function createTransaction(
     .single();
 
   if (error) throw error;
-  return data as Transaction;
+  return validate(TransactionSchema, data, 'createTransaction');
 }
 
 export async function updateTransaction(
@@ -37,7 +38,7 @@ export async function updateTransaction(
     .single();
 
   if (error) throw error;
-  return data as Transaction;
+  return validate(TransactionSchema, data, 'updateTransaction');
 }
 
 export async function deleteTransaction(transactionId: string): Promise<void> {
@@ -52,6 +53,6 @@ export async function getProjectTotalSpent(projectId: string): Promise<number> {
     .eq('project_id', projectId);
 
   if (error) throw error;
-  const rows = (data ?? []) as Pick<Transaction, 'amount'>[];
-  return rows.reduce((sum, t) => sum + Number(t.amount), 0);
+  const rows = validate(AmountRowSchema.array(), data ?? [], 'total-spent');
+  return rows.reduce((sum, t) => sum + t.amount, 0);
 }

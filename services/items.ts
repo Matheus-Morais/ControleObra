@@ -1,5 +1,6 @@
 import type { Item, ItemStatus, ItemWithOptions } from '../types';
 import { supabase } from './supabase';
+import { ItemSchema, ItemWithOptionsSchema, validate } from './schemas';
 
 export async function getItems(roomId: string): Promise<Item[]> {
   const { data, error } = await supabase
@@ -9,7 +10,7 @@ export async function getItems(roomId: string): Promise<Item[]> {
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return (data ?? []) as Item[];
+  return validate(ItemSchema.array(), data ?? [], 'items');
 }
 
 export async function getItemsByProject(projectId: string): Promise<Item[]> {
@@ -20,7 +21,7 @@ export async function getItemsByProject(projectId: string): Promise<Item[]> {
     .order('updated_at', { ascending: false });
 
   if (error) throw error;
-  return (data ?? []) as Item[];
+  return validate(ItemSchema.array(), data ?? [], 'project-items');
 }
 
 export async function getItem(itemId: string): Promise<ItemWithOptions> {
@@ -31,7 +32,7 @@ export async function getItem(itemId: string): Promise<ItemWithOptions> {
     .single();
 
   if (error) throw error;
-  return data as ItemWithOptions;
+  return validate(ItemWithOptionsSchema, data, 'item');
 }
 
 export async function createItem(
@@ -40,7 +41,7 @@ export async function createItem(
   const { data, error } = await supabase.from('items').insert(item).select().single();
 
   if (error) throw error;
-  return data as Item;
+  return validate(ItemSchema, data, 'createItem');
 }
 
 export async function updateItem(itemId: string, updates: Partial<Item>): Promise<Item> {
@@ -52,7 +53,7 @@ export async function updateItem(itemId: string, updates: Partial<Item>): Promis
     .single();
 
   if (error) throw error;
-  return data as Item;
+  return validate(ItemSchema, data, 'updateItem');
 }
 
 export async function updateItemStatus(

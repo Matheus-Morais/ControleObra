@@ -1,6 +1,7 @@
 import type { Session, User, WeakPassword } from '@supabase/supabase-js';
 import type { Profile } from '../types';
 import { supabase } from './supabase';
+import { ProfileSchema, validate } from './schemas';
 
 export async function signUp(
   email: string,
@@ -48,7 +49,7 @@ export async function getProfile(userId: string): Promise<Profile> {
     .eq('id', userId)
     .single();
   if (error) throw error;
-  return data as Profile;
+  return validate(ProfileSchema, data, 'getProfile');
 }
 
 export async function updateProfile(
@@ -62,5 +63,5 @@ export async function updateProfile(
     .select()
     .single();
   if (error) throw error;
-  return data as Profile;
+  return validate(ProfileSchema, data, 'updateProfile');
 }

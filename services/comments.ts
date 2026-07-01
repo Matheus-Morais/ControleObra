@@ -1,5 +1,6 @@
 import type { ItemComment, Profile } from '../types';
 import { supabase } from './supabase';
+import { ItemCommentSchema, ProfileSchema, validate } from './schemas';
 
 export type ItemCommentWithProfile = ItemComment & { profiles: Profile | null };
 
@@ -12,7 +13,7 @@ export async function getComments(itemId: string): Promise<ItemCommentWithProfil
 
   if (error) throw error;
 
-  const baseComments = (comments ?? []) as ItemComment[];
+  const baseComments = validate(ItemCommentSchema.array(), comments ?? [], 'comments');
   if (baseComments.length === 0) return [];
 
   const userIds = [...new Set(baseComments.map((c) => c.user_id).filter(Boolean))];
@@ -30,7 +31,8 @@ export async function getComments(itemId: string): Promise<ItemCommentWithProfil
     return baseComments.map((c) => ({ ...c, profiles: null }));
   }
 
-  const profileById = new Map<string, Profile>((profiles ?? []).map((p) => [p.id, p as Profile]));
+  const parsedProfiles = validate(ProfileSchema.array(), profiles ?? [], 'comment-profiles');
+  const profileById = new Map<string, Profile>(parsedProfiles.map((p) => [p.id, p]));
   return baseComments.map((c) => ({
     ...c,
     profiles: profileById.get(c.user_id) ?? null,
@@ -49,7 +51,7 @@ export async function createComment(
     .single();
 
   if (error) throw error;
-  return data as ItemComment;
+  return validate(ItemCommentSchema, data, 'createComment');
 }
 
 export async function deleteComment(commentId: string): Promise<void> {
