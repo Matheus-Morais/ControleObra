@@ -15,26 +15,32 @@ O `vercel.json` builda com `npx expo export --platform web` e serve `dist/` como
 
 ## Migrations (Supabase)
 
-As migrations ficam em `supabase/migrations/*.sql`. O runner é idempotente
-(registra o aplicado em `public._migrations`, roda cada arquivo em transação).
+As migrations ficam em `supabase/migrations/*.sql`. O runner (`npm run db:migrate`)
+é idempotente: registra o aplicado em `public._migrations` e pula o que já rodou.
+Aceita duas credenciais (usa a que estiver no `.env`):
 
-1. Pegue a connection string: **Supabase → Project Settings → Database →
-   Connection string (URI)**, opção **Direct connection / Session** (porta 5432).
-   ⚠️ Não use o *transaction pooler* (6543) para DDL.
-2. Coloque no `.env` (gitignored):
-   ```
-   SUPABASE_DB_URL=postgresql://postgres:SENHA@db.<ref>.supabase.co:5432/postgres
-   ```
-3. Rode: `npm run db:migrate`
+- **Recomendado — Personal Access Token (Management API):** gere em
+  https://supabase.com/dashboard/account/tokens e ponha no `.env`:
+  ```
+  SUPABASE_ACCESS_TOKEN=sbp_xxx
+  ```
+  (o ref do projeto é lido de `EXPO_PUBLIC_SUPABASE_URL`).
+- **Alternativa — connection string direta:** **Supabase → Project Settings →
+  Database → Connection string (URI)**, modo **Session** (porta 5432; ⚠️ não o
+  pooler 6543):
+  ```
+  SUPABASE_DB_URL=postgresql://postgres:SENHA@db.<ref>.supabase.co:5432/postgres
+  ```
 
-Alternativa manual: colar o `.sql` no SQL Editor do Supabase.
+Depois: `npm run db:migrate`. (Alternativa manual: colar o `.sql` no SQL Editor.)
 
 ## Segredos necessários (ficam só no `.env`, nunca no git)
 
-| Variável           | Para quê                    | Onde obter                         |
-|--------------------|-----------------------------|------------------------------------|
-| `SUPABASE_DB_URL`  | `npm run db:migrate`        | Supabase → Database → Connection   |
-| `VERCEL_TOKEN`     | `npm run deploy` (opcional) | vercel.com/account/tokens          |
+| Variável                | Para quê                    | Onde obter                              |
+|-------------------------|-----------------------------|-----------------------------------------|
+| `SUPABASE_ACCESS_TOKEN` | `npm run db:migrate` (rec.) | supabase.com/dashboard/account/tokens   |
+| `SUPABASE_DB_URL`       | `npm run db:migrate` (alt.) | Supabase → Database → Connection        |
+| `VERCEL_TOKEN`          | `npm run deploy` (opcional) | vercel.com/account/tokens               |
 
 Com esses no lugar, "rodar as migrations e fazer deploy" vira:
 `npm run db:migrate && git push origin master`.
