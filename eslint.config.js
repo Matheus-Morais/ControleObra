@@ -33,6 +33,6 @@ module.exports = [
     },
   },
   {
-    ignores: ['dist/*', 'node_modules/*', '.expo/*', 'babel.config.js'],
+    ignores: ['dist/*', 'node_modules/*', '.expo/*', 'babel.config.js', 'scripts/*'],
   },
 ];
