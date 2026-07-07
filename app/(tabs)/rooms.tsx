@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Keyboard } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useProjectStore } from '../../stores/projectStore';
 import { useTheme } from '../../hooks/useTheme';
@@ -46,6 +47,7 @@ function buildProgressByRoomId(items: Item[]) {
 
 export default function RoomsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const activeProject = useProjectStore((s) => s.activeProject);
   const { data: rooms, isLoading: roomsLoading, isError: roomsError, refetch: refetchRooms } = useRooms(activeProject?.id);
@@ -206,7 +208,7 @@ export default function RoomsScreen() {
   }
 
   return (
-    <View className="flex-1 bg-cream dark:bg-sand-900">
+    <View className="flex-1 bg-cream dark:bg-sand-900" style={{ paddingTop: insets.top }}>
       <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ paddingBottom: 100 }}>
         <Text className="text-xl font-bold text-sand-900 dark:text-sand-50 mb-4">
           Cômodos

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
@@ -20,6 +21,7 @@ const THEME_OPTIONS: { key: ThemePreference; label: string; icon: keyof typeof F
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { user, profile } = useAuthStore();
   const { activeProject } = useProjectStore();
@@ -82,7 +84,7 @@ export default function SettingsScreen() {
   return (
     <ScrollView
       className="flex-1 bg-cream dark:bg-sand-900 px-4 pt-4"
-      contentContainerStyle={{ paddingBottom: 40 }}
+      contentContainerStyle={{ paddingBottom: 40, paddingTop: insets.top }}
     >
       <Text className="text-xl font-bold text-sand-900 dark:text-sand-50 mb-6">Ajustes</Text>
 

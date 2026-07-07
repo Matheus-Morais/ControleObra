@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
 import { Feather } from '@expo/vector-icons';
 import { useProjectStore } from '../../stores/projectStore';
@@ -19,6 +20,7 @@ import * as Sharing from 'expo-sharing';
 
 export default function FinancialScreen() {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const activeProject = useProjectStore((s) => s.activeProject);
   const user = useAuthStore((s) => s.user);
   const { data: items } = useProjectItems(activeProject?.id);
@@ -347,7 +349,7 @@ export default function FinancialScreen() {
   );
 
   return (
-    <View className="flex-1 bg-cream dark:bg-sand-900">
+    <View className="flex-1 bg-cream dark:bg-sand-900" style={{ paddingTop: insets.top }}>
       <FlashList
         data={transactions}
         keyExtractor={(txn) => txn.id}

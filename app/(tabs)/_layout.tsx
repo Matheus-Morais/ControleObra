@@ -17,6 +17,9 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
+        // As abas usam título grande no próprio corpo (padrão "large title"),
+        // então o header nativo redundante fica oculto — mais espaço e hierarquia.
+        headerShown: false,
         headerStyle: { backgroundColor: colors.headerBg },
         headerTintColor: colors.textPrimary,
         headerTitleStyle: { fontWeight: '600' },
