@@ -332,7 +332,7 @@ export default function RoomsScreen() {
                   paddingHorizontal: 16,
                   paddingVertical: 8,
                   borderRadius: 8,
-                  backgroundColor: editName.trim() && editName.trim() !== editingRoom.name ? '#B85C38' : colors.borderStrong,
+                  backgroundColor: editName.trim() && editName.trim() !== editingRoom.name ? colors.accent : colors.borderStrong,
                 }}
                 disabled={!editName.trim() || editName.trim() === editingRoom.name}
               >
@@ -395,7 +395,7 @@ export default function RoomsScreen() {
                   paddingHorizontal: 16,
                   paddingVertical: 8,
                   borderRadius: 8,
-                  backgroundColor: newRoomName.trim() ? '#B85C38' : colors.borderStrong,
+                  backgroundColor: newRoomName.trim() ? colors.accent : colors.borderStrong,
                 }}
                 disabled={!newRoomName.trim()}
               >

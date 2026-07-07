@@ -137,7 +137,7 @@ export function CategoryPickerModal({
                 paddingHorizontal: 12,
                 paddingVertical: 10,
                 borderRadius: 10,
-                backgroundColor: newCategoryName.trim() ? '#B85C38' : colors.borderStrong,
+                backgroundColor: newCategoryName.trim() ? colors.accent : colors.borderStrong,
               }}
             >
               <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Adicionar</Text>

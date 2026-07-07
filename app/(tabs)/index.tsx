@@ -13,20 +13,6 @@ import { Card, ProgressBar, EmptyState, LoadingScreen, StatusChip, Button } from
 import { formatCurrency, formatPercentage, formatDateTime } from '../../utils/format';
 import type { Item, ItemStatus } from '../../types';
 
-function StatusSummaryCard({ icon, label, count, color }: { icon: string; label: string; count: number; color: string }) {
-  return (
-    <View className="bg-white dark:bg-sand-800 rounded-xl p-3 border border-sand-100 dark:border-sand-700 flex-1" style={{ minWidth: '45%' }}>
-      <View className="flex-row items-center mb-1">
-        <View className="w-8 h-8 rounded-lg items-center justify-center mr-2" style={{ backgroundColor: color + '20' }}>
-          <Feather name={icon as any} size={16} color={color} />
-        </View>
-        <Text className="text-sand-500 dark:text-sand-400 text-xs">{label}</Text>
-      </View>
-      <Text className="text-sand-900 dark:text-sand-50 text-2xl font-bold">{count}</Text>
-    </View>
-  );
-}
-
 export default function DashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -54,6 +40,14 @@ export default function DashboardScreen() {
   const totalBudget = Number(activeProject?.total_budget) || stats.totalBudget;
   const remaining = Math.max(0, totalBudget - totalSpent);
   const overBudget = totalBudget > 0 && totalSpent > totalBudget;
+
+  // Funil da obra: as 4 etapas na ordem do fluxo (Pesquisando -> Instalado).
+  const stages = [
+    { key: 'researching', label: 'Pesquisando', color: '#3B82F6', count: stats.researching },
+    { key: 'decided', label: 'Decididos', color: '#F59E0B', count: stats.decided },
+    { key: 'purchased', label: 'Comprados', color: '#8B5CF6', count: stats.purchased },
+    { key: 'installed', label: 'Instalados', color: '#10B981', count: stats.installed },
+  ];
 
   const recentItems = useMemo(() => {
     if (!items) return [];
@@ -158,12 +152,38 @@ export default function DashboardScreen() {
         </Card>
       </View>
 
-      {/* Status cards */}
-      <View className="px-4 mt-4 flex-row flex-wrap" style={{ gap: 10 }}>
-        <StatusSummaryCard icon="search" label="Pesquisando" count={stats.researching} color="#3B82F6" />
-        <StatusSummaryCard icon="check-circle" label="Decididos" count={stats.decided} color="#F59E0B" />
-        <StatusSummaryCard icon="shopping-cart" label="Comprados" count={stats.purchased} color="#8B5CF6" />
-        <StatusSummaryCard icon="check-square" label="Instalados" count={stats.installed} color="#10B981" />
+      {/* Etapas dos itens (funil da obra) */}
+      <View className="px-4 mt-4">
+        <Card>
+          <Text className="text-sand-700 dark:text-sand-200 font-semibold mb-3">Etapas dos itens</Text>
+          {stats.total > 0 ? (
+            <>
+              <View className="flex-row h-2.5 rounded-full overflow-hidden bg-sand-200 dark:bg-sand-700 mb-4">
+                {stages.map((s) =>
+                  s.count > 0 ? (
+                    <View
+                      key={s.key}
+                      style={{ width: `${(s.count / stats.total) * 100}%`, backgroundColor: s.color }}
+                    />
+                  ) : null
+                )}
+              </View>
+              <View className="flex-row flex-wrap" style={{ rowGap: 10 }}>
+                {stages.map((s) => (
+                  <View key={s.key} className="flex-row items-center" style={{ width: '50%', paddingRight: 16 }}>
+                    <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: s.color, marginRight: 8 }} />
+                    <Text className="text-sand-600 dark:text-sand-300 text-xs flex-1" numberOfLines={1}>
+                      {s.label}
+                    </Text>
+                    <Text className="text-sand-900 dark:text-sand-50 text-sm font-bold">{s.count}</Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          ) : (
+            <Text className="text-sand-500 dark:text-sand-400 text-sm">Nenhum item cadastrado ainda</Text>
+          )}
+        </Card>
       </View>
 
       {/* Budget by room chart */}
