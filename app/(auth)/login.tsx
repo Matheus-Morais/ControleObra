@@ -16,7 +16,6 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
 
   async function handleLogin() {
     if (!email.trim() || !password.trim()) {
@@ -71,7 +70,8 @@ export default function LoginScreen() {
             placeholder="Sua senha"
             value={password}
             onChangeText={setPassword}
-            secureTextEntry={!showPassword}
+            secureTextEntry
+            passwordToggle
             autoCapitalize="none"
           />
 

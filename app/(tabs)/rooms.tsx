@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, TextInput, Keyboard } from 'r
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useProjectStore } from '../../stores/projectStore';
 import { useTheme } from '../../hooks/useTheme';
 import { useRooms, useCreateRoom, useUpdateRoom, useDeleteRoom } from '../../hooks/useRooms';
@@ -406,19 +407,22 @@ export default function RoomsScreen() {
         )}
 
         <View className="flex-row flex-wrap" style={{ gap: 12 }}>
-          {rooms.map((room) => {
+          {rooms.map((room, index) => {
             const progress = progressByRoomId.get(room.id) ?? EMPTY_ROOM_PROGRESS;
             const pct = formatPercentage(progress.done, progress.total);
 
             return (
-              <Card
+              <Animated.View
                 key={room.id}
+                entering={FadeInDown.delay(index * 40).duration(280)}
+                style={{ width: '47%' }}
+              >
+              <Card
                 onPress={() => handleRoomPress(room)}
                 onLongPress={() => handleRoomLongPress(room)}
                 accessibilityRole="button"
                 accessibilityLabel={`Abrir cômodo ${room.name}`}
                 className="mb-1"
-                style={{ width: '47%' }}
               >
                 <View
                   className="w-10 h-10 rounded-xl items-center justify-center mb-2"
@@ -451,6 +455,7 @@ export default function RoomsScreen() {
                   </Text>
                 )}
               </Card>
+              </Animated.View>
             );
           })}
         </View>
