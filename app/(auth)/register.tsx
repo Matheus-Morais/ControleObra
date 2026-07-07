@@ -95,6 +95,7 @@ export default function RegisterScreen() {
             value={password}
             onChangeText={setPassword}
             secureTextEntry
+            passwordToggle
             autoCapitalize="none"
           />
 
@@ -104,6 +105,7 @@ export default function RegisterScreen() {
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry
+            passwordToggle
             autoCapitalize="none"
           />
 

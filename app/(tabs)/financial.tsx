@@ -356,8 +356,16 @@ export default function FinancialScreen() {
         contentContainerStyle={{ paddingBottom: 30 }}
         ListHeaderComponent={listHeader}
         ListEmptyComponent={
-          <View className="px-4 py-8">
-            <Text className="text-sand-500 dark:text-sand-400 text-center">Nenhum pagamento registrado</Text>
+          <View className="px-4 py-10 items-center">
+            <View className="bg-sand-100 dark:bg-sand-800 rounded-full p-5 mb-3">
+              <Feather name="credit-card" size={30} color="#A89270" />
+            </View>
+            <Text className="text-sand-700 dark:text-sand-200 font-medium text-center mb-1">
+              Nenhum pagamento ainda
+            </Text>
+            <Text className="text-sand-500 dark:text-sand-400 text-sm text-center">
+              Toque em “Adicionar” acima para registrar o primeiro pagamento
+            </Text>
           </View>
         }
         renderItem={({ item: txn }) => (

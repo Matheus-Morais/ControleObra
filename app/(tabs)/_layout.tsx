@@ -26,10 +26,13 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: colors.headerBg,
           borderTopColor: colors.border,
-          height: (isAndroid ? 62 : 56) + insets.bottom,
-          paddingBottom: insets.bottom + (isAndroid ? 2 : 0),
-          paddingTop: isAndroid ? 4 : 8,
-          marginBottom: 2,
+          // Barra mais alta com respiro embaixo: sobe os ícones/labels (mais
+          // confortável no celular, acima do home indicator) mantendo ~52px de
+          // área útil para ícone + rótulo (sem cortar o texto). Sem marginBottom,
+          // que deixava uma faixa/linha visível abaixo das tabs.
+          height: 70 + insets.bottom,
+          paddingTop: 6,
+          paddingBottom: insets.bottom + 12,
         },
         tabBarItemStyle: {
           justifyContent: 'center',
@@ -61,6 +64,15 @@ export default function TabLayout() {
           title: 'Cômodos',
           tabBarIcon: ({ color, size }) => (
             <Feather name="grid" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="items"
+        options={{
+          title: 'Itens',
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="list" size={size} color={color} />
           ),
         }}
       />
