@@ -1,15 +1,17 @@
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from './supabase';
 
-function imageContentType(ext: string): string {
-  const e = ext.toLowerCase();
-  if (e === 'jpg' || e === 'jpeg') return 'image/jpeg';
-  if (e === 'png') return 'image/png';
-  if (e === 'gif') return 'image/gif';
-  if (e === 'webp') return 'image/webp';
-  if (e === 'heic' || e === 'heif') return 'image/heic';
-  return 'image/jpeg';
-}
+const ALLOWED_IMAGE_TYPES: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  heic: 'image/heic',
+  heif: 'image/heif',
+};
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 export async function pickImage(): Promise<string | null> {
   const result = await ImagePicker.launchImageLibraryAsync({
@@ -23,17 +25,25 @@ export async function pickImage(): Promise<string | null> {
 }
 
 export async function uploadPhoto(uri: string, userId: string): Promise<string> {
-  const ext = uri.split('.').pop()?.split('?')[0] ?? 'jpg';
+  const rawExt = uri.split('.').pop()?.split('?')[0]?.toLowerCase() ?? '';
+  const contentType = ALLOWED_IMAGE_TYPES[rawExt];
+  if (!contentType) throw new Error('Tipo de arquivo não permitido. Use JPG, PNG, GIF, WEBP ou HEIC.');
+
+  const ext = rawExt === 'jpeg' ? 'jpg' : rawExt;
   const fileName = `${userId}/${Date.now()}.${ext}`;
 
   const response = await fetch(uri);
   const blob = await response.blob();
+
+  if (blob.size > MAX_FILE_SIZE) throw new Error('Arquivo muito grande. Máximo: 10 MB.');
+  if (!blob.type.startsWith('image/') && blob.type !== '') throw new Error('Arquivo não é uma imagem válida.');
+
   const arrayBuffer = await new Response(blob).arrayBuffer();
 
   const { error } = await supabase.storage
     .from('item-photos')
     .upload(fileName, arrayBuffer, {
-      contentType: imageContentType(ext),
+      contentType,
       upsert: false,
     });
 

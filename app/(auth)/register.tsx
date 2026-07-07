@@ -30,8 +30,13 @@ export default function RegisterScreen() {
       return;
     }
 
-    if (password.length < 6) {
-      showAlert('Erro', 'A senha deve ter pelo menos 6 caracteres');
+    if (password.length < 8) {
+      showAlert('Erro', 'A senha deve ter pelo menos 8 caracteres');
+      return;
+    }
+
+    if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+      showAlert('Erro', 'A senha deve conter ao menos uma letra maiúscula e um número');
       return;
     }
 
@@ -91,7 +96,7 @@ export default function RegisterScreen() {
 
           <Input
             label="Senha"
-            placeholder="Mínimo 6 caracteres"
+            placeholder="Mínimo 8 caracteres"
             value={password}
             onChangeText={setPassword}
             secureTextEntry

@@ -102,7 +102,9 @@ async function runViaManagementApi(token) {
     console.log(`[migrate] aplicando: ${file} ...`);
     const sql = readFileSync(join(root, 'supabase', 'migrations', file), 'utf8');
     await query(sql);
-    await query(`INSERT INTO public._migrations(name) VALUES ('${file}')`);
+    // Parameterized via JSON body — Management API does not support $1 placeholders,
+    // so we embed the value as a quoted literal using pg dollar-quoting to prevent injection.
+    await query(`INSERT INTO public._migrations(name) VALUES ($migration$${file}$migration$)`);
     ran++;
     console.log(`[migrate] OK: ${file}`);
   }
