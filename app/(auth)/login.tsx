@@ -7,9 +7,8 @@ import {
   ScrollView,
 } from 'react-native';
 import { Link } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
 import { signIn } from '../../services/auth';
-import { Button, Input } from '../../components/ui';
+import { Button, Input, Logo } from '../../components/ui';
 import { showAlert } from '../../utils/alert';
 
 export default function LoginScreen() {
@@ -44,15 +43,7 @@ export default function LoginScreen() {
       >
         <View className="flex-1 justify-center px-8 py-12">
           <View className="items-center mb-10">
-            <View className="bg-terracotta-500 w-16 h-16 rounded-2xl items-center justify-center mb-4">
-              <Feather name="home" size={32} color="#fff" />
-            </View>
-            <Text className="text-3xl font-bold text-sand-900 dark:text-sand-50">
-              ControleObra
-            </Text>
-            <Text className="text-sand-500 dark:text-sand-400 text-base mt-1">
-              Gerencie sua obra com facilidade
-            </Text>
+            <Logo size="lg" showText subtitle="Gerencie sua obra com facilidade" />
           </View>
 
           <Input
