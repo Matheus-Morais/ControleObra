@@ -157,9 +157,11 @@ async function generate() {
 
   for (const task of tasks) {
     const outPath = path.join(ASSETS_DIR, task.name);
-    await sharp(Buffer.from(task.svg))
-      .resize(task.width, task.height)
-      .png()
+    // Renderiza o SVG com density=300 (supersample ~4×) e reduz com Lanczos
+    // para evitar pixelação causada pelo rasterizador padrão em 72 DPI.
+    await sharp(Buffer.from(task.svg), { density: 300 })
+      .resize(task.width, task.height, { kernel: sharp.kernel.lanczos3 })
+      .png({ compressionLevel: 9 })
       .toFile(outPath);
     console.log(`✓ ${task.name} (${task.width}×${task.height})`);
   }
