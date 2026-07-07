@@ -185,7 +185,7 @@ export default function SettingsScreen() {
                     paddingHorizontal: 14,
                     paddingVertical: 8,
                     borderRadius: 8,
-                    backgroundColor: projectName.trim() && projectName.trim() !== activeProject.name ? '#B85C38' : colors.borderStrong,
+                    backgroundColor: projectName.trim() && projectName.trim() !== activeProject.name ? colors.accent : colors.borderStrong,
                   }}
                 >
                   <Text style={{ color: '#fff', fontWeight: '600' }}>

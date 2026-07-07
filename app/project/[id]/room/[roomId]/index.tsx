@@ -207,7 +207,7 @@ export default function RoomItemsScreen() {
               paddingVertical: 8,
               borderRadius: 20,
               marginRight: 8,
-              backgroundColor: statusFilter === f.key ? '#B85C38' : colors.surface,
+              backgroundColor: statusFilter === f.key ? colors.accent : colors.surface,
               borderWidth: statusFilter === f.key ? 0 : 1,
               borderColor: colors.border,
             }}
@@ -474,7 +474,7 @@ export default function RoomItemsScreen() {
                     paddingHorizontal: 12,
                     paddingVertical: 10,
                     borderRadius: 10,
-                    backgroundColor: newCategoryName.trim() ? '#B85C38' : colors.border,
+                    backgroundColor: newCategoryName.trim() ? colors.accent : colors.border,
                   }}
                 >
                   <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Adicionar</Text>
