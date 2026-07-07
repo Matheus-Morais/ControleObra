@@ -244,7 +244,7 @@ export default function FinancialScreen() {
                   </View>
                   <View className="items-end">
                     <Text className="text-sand-900 dark:text-sand-50 text-sm font-semibold">
-                      {formatCurrency(room.budget)}
+                      Orçamento: {formatCurrency(room.budget)}
                     </Text>
                     {room.spent > 0 && (
                       <Text className="text-sand-500 dark:text-sand-400 text-xs">

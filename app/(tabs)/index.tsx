@@ -11,6 +11,7 @@ import { useProjectTotalSpent } from '../../hooks/useTransactions';
 import { useLoadingTimeout } from '../../hooks/useLoadingTimeout';
 import { Card, ProgressBar, EmptyState, LoadingScreen, StatusChip, Button } from '../../components/ui';
 import { formatCurrency, formatPercentage, formatDateTime } from '../../utils/format';
+import { StatusConfig } from '../../constants/colors';
 import type { Item, ItemStatus } from '../../types';
 
 export default function DashboardScreen() {
@@ -41,12 +42,11 @@ export default function DashboardScreen() {
   const remaining = Math.max(0, totalBudget - totalSpent);
   const overBudget = totalBudget > 0 && totalSpent > totalBudget;
 
-  // Funil da obra: as 4 etapas na ordem do fluxo (Pesquisando -> Instalado).
   const stages = [
-    { key: 'researching', label: 'Pesquisando', color: '#3B82F6', count: stats.researching },
-    { key: 'decided', label: 'Decididos', color: '#F59E0B', count: stats.decided },
-    { key: 'purchased', label: 'Comprados', color: '#8B5CF6', count: stats.purchased },
-    { key: 'installed', label: 'Instalados', color: '#10B981', count: stats.installed },
+    { key: 'researching', label: StatusConfig.researching.label, color: StatusConfig.researching.hex, count: stats.researching },
+    { key: 'decided',     label: StatusConfig.decided.label,     color: StatusConfig.decided.hex,     count: stats.decided },
+    { key: 'purchased',   label: StatusConfig.purchased.label,   color: StatusConfig.purchased.hex,   count: stats.purchased },
+    { key: 'installed',   label: StatusConfig.installed.label,   color: StatusConfig.installed.hex,   count: stats.installed },
   ];
 
   const recentItems = useMemo(() => {
@@ -189,7 +189,7 @@ export default function DashboardScreen() {
       {/* Budget by room chart */}
       {roomBudgets.length > 0 && (
         <View className="px-4 mt-6">
-          <Text className="text-sand-900 dark:text-sand-50 font-bold text-base mb-3">Gastos por Cômodo</Text>
+          <Text className="text-sand-900 dark:text-sand-50 font-bold text-base mb-3">Orçamento por Cômodo</Text>
           {roomBudgets.slice(0, 6).map((room) => {
             const maxBudget = Math.max(...roomBudgets.map((r) => r.budget), 1);
             const barWidth = formatPercentage(room.budget, maxBudget);
