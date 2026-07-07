@@ -2,8 +2,12 @@ import React from 'react';
 import { Pressable } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Feather } from '@expo/vector-icons';
+import { cssInterop } from 'nativewind';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+// Sem registrar o cssInterop, o className (bg-terracotta-500, shadow, etc.) do
+// Pressable animado é ignorado pelo NativeWind e o FAB fica sem fundo.
+cssInterop(AnimatedPressable, { className: 'style' });
 
 interface FABProps {
   onPress: () => void;

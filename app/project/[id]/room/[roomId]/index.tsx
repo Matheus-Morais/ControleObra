@@ -311,16 +311,19 @@ export default function RoomItemsScreen() {
             }
             renderItem={({ item }) => (
               <View className="px-4">
-                <Card
-                  onPress={() =>
-                    router.push(`/project/${projectId}/room/${roomId}/item/${item.id}`)
-                  }
-                  className="mb-3"
-                  accessibilityRole="button"
-                  accessibilityLabel={`Abrir item ${item.name}`}
-                >
+                {/* Card é uma View (não-pressável): a área de abrir o item e o botão de
+                    remover são IRMÃOS, evitando <button> aninhado (DOM inválido/a11y). */}
+                <Card className="mb-3">
                   <View className="flex-row items-start justify-between">
-                    <View className="flex-1 mr-3">
+                    <TouchableOpacity
+                      onPress={() =>
+                        router.push(`/project/${projectId}/room/${roomId}/item/${item.id}`)
+                      }
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Abrir item ${item.name}`}
+                      className="flex-1 mr-3"
+                    >
                       <Text className="text-sand-900 dark:text-sand-50 font-semibold text-base">
                         {item.name}
                       </Text>
@@ -345,7 +348,7 @@ export default function RoomItemsScreen() {
                           {formatCurrency(item.budget)}
                         </Text>
                       )}
-                    </View>
+                    </TouchableOpacity>
                     <View className="items-end">
                       <StatusChip status={item.status} size="sm" />
                       <TouchableOpacity
