@@ -24,3 +24,6 @@ android/
 
 # Wiki / documentacao local (nao versionada)
 wiki/
+
+# Saída da skill de revisão visual (screenshots do Playwright)
+.visual-review/
