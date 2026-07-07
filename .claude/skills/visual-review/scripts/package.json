@@ -1,0 +1,9 @@
+{
+  "name": "visual-review-scripts",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright capture script for the ControleObra visual-review skill",
+  "dependencies": {
+    "playwright": "^1.61.0"
+  }
+}

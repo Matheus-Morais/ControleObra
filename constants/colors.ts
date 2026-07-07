@@ -1,3 +1,38 @@
+export const StatusConfig = {
+  researching: {
+    hex: '#3B82F6',
+    chipBg: '#BFDBFE',
+    chipBgDark: '#1e3a5f',
+    chipText: '#1D4ED8',
+    chipTextDark: '#93C5FD',
+    label: 'Pesquisando',
+  },
+  decided: {
+    hex: '#F59E0B',
+    chipBg: '#FDE68A',
+    chipBgDark: '#451A03',
+    chipText: '#B45309',
+    chipTextDark: '#FCD34D',
+    label: 'Decidido',
+  },
+  purchased: {
+    hex: '#8B5CF6',
+    chipBg: '#DDD6FE',
+    chipBgDark: '#2E1065',
+    chipText: '#6D28D9',
+    chipTextDark: '#C4B5FD',
+    label: 'Comprado',
+  },
+  installed: {
+    hex: '#10B981',
+    chipBg: '#A7F3D0',
+    chipBgDark: '#064E3B',
+    chipText: '#047857',
+    chipTextDark: '#6EE7B7',
+    label: 'Instalado',
+  },
+} as const;
+
 export const Colors = {
   sand: {
     50: '#F5F0E8',

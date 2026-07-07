@@ -1,30 +1,9 @@
 import React from 'react';
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { useTheme } from '../../hooks/useTheme';
+import { StatusConfig } from '../../constants/colors';
 import type { ItemStatus } from '../../types';
-
-const statusConfig: Record<ItemStatus, { bg: string; text: string; label: string }> = {
-  researching: {
-    bg: 'bg-blue-100 dark:bg-blue-900',
-    text: 'text-blue-700 dark:text-blue-200',
-    label: 'Pesquisando',
-  },
-  decided: {
-    bg: 'bg-amber-100 dark:bg-amber-900',
-    text: 'text-amber-700 dark:text-amber-200',
-    label: 'Decidido',
-  },
-  purchased: {
-    bg: 'bg-purple-100 dark:bg-purple-900',
-    text: 'text-purple-700 dark:text-purple-200',
-    label: 'Comprado',
-  },
-  installed: {
-    bg: 'bg-emerald-100 dark:bg-emerald-900',
-    text: 'text-emerald-700 dark:text-emerald-200',
-    label: 'Instalado',
-  },
-};
 
 interface StatusChipProps {
   status: ItemStatus;
@@ -32,20 +11,24 @@ interface StatusChipProps {
 }
 
 export function StatusChip({ status, size = 'md' }: StatusChipProps) {
-  const config = statusConfig[status];
-  const sizeStyles = size === 'sm' ? 'px-2 py-0.5' : 'px-3 py-1';
-  const textSize = size === 'sm' ? 'text-xs' : 'text-sm';
+  const { isDark } = useTheme();
+  const cfg = StatusConfig[status];
+
+  const bg = isDark ? cfg.chipBgDark : cfg.chipBg;
+  const color = isDark ? cfg.chipTextDark : cfg.chipText;
+  const px = size === 'sm' ? 8 : 12;
+  const py = size === 'sm' ? 2 : 4;
+  const fontSize = size === 'sm' ? 12 : 14;
 
   return (
-    // key={status} + FadeIn: reanima suavemente quando o status muda.
     <Animated.View
       key={status}
       entering={FadeIn.duration(220)}
-      className={`${config.bg} ${sizeStyles} rounded-full self-start`}
+      style={{ backgroundColor: bg, paddingHorizontal: px, paddingVertical: py, borderRadius: 999, alignSelf: 'flex-start' }}
       accessibilityRole="text"
-      accessibilityLabel={`Status: ${config.label}`}
+      accessibilityLabel={`Status: ${cfg.label}`}
     >
-      <Text className={`${config.text} ${textSize} font-medium`}>{config.label}</Text>
+      <Text style={{ color, fontSize, fontWeight: '500' }}>{cfg.label}</Text>
     </Animated.View>
   );
 }
