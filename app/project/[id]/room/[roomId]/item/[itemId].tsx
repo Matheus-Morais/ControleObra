@@ -131,11 +131,11 @@ export default function ItemDetailScreen() {
           placeholder="0.00"
           displayContent={
             <>
-              <Text className="text-2xl font-bold text-sand-900 mt-1">
+              <Text className="text-2xl font-bold text-sand-900 dark:text-sand-50 mt-1">
                 {formatCurrency(Number(item.budget) || 0)}
               </Text>
               {item.actual_price !== null && item.actual_price !== undefined && (
-                <Text className="text-moss-500 text-sm mt-1">
+                <Text className="text-moss-500 dark:text-moss-300 text-sm mt-1">
                   Preço real: {formatCurrency(Number(item.actual_price))}
                 </Text>
               )}
@@ -158,7 +158,7 @@ export default function ItemDetailScreen() {
           multiline
           placeholder="Adicione notas..."
           displayContent={
-            <Text className="text-sand-600 text-sm">{item.notes || 'Nenhuma nota adicionada'}</Text>
+            <Text className="text-sand-600 dark:text-sand-300 text-sm">{item.notes || 'Nenhuma nota adicionada'}</Text>
           }
         />
 

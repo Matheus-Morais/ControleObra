@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { useOnboardingStore } from '../stores/onboardingStore';
 
 const { width } = Dimensions.get('window');
 
@@ -62,16 +63,21 @@ export default function OnboardingScreen() {
 
   const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
 
+  function finishOnboarding() {
+    useOnboardingStore.getState().markSeen();
+    router.replace('/(auth)/login');
+  }
+
   function handleNext() {
     if (currentIndex < SLIDES.length - 1) {
       flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
     } else {
-      router.replace('/(auth)/login');
+      finishOnboarding();
     }
   }
 
   function handleSkip() {
-    router.replace('/(auth)/login');
+    finishOnboarding();
   }
 
   const renderItem = ({ item }: { item: OnboardingItem }) => (

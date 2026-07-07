@@ -10,6 +10,7 @@ import { supabase } from '../services/supabase';
 import { useAuthStore } from '../stores/authStore';
 import { useProjectStore } from '../stores/projectStore';
 import { useThemeStore } from '../stores/themeStore';
+import { useOnboardingStore } from '../stores/onboardingStore';
 import { useApplyThemePreference, useTheme } from '../hooks/useTheme';
 import { getProfile } from '../services/auth';
 import { LoadingScreen, ErrorBoundary } from '../components/ui';
@@ -52,21 +53,29 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const session = useAuthStore((s) => s.session);
   const isLoading = useAuthStore((s) => s.isLoading);
   const authError = useAuthStore((s) => s.authError);
+  const onboardingSeen = useOnboardingStore((s) => s.seen);
+  const onboardingHydrated = useOnboardingStore((s) => s.hydrated);
   const segments = useSegments();
   const router = useRouter();
   const { colors } = useTheme();
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || !onboardingHydrated) return;
 
-    const inAuthGroup = segments[0] === '(auth)';
+    const seg = segments[0];
+    const inAuthGroup = seg === '(auth)';
+    const inOnboarding = seg === 'onboarding';
 
-    if (!session && !inAuthGroup) {
-      router.replace('/(auth)/login');
-    } else if (session && inAuthGroup) {
-      router.replace('/(tabs)');
+    if (session) {
+      // Logado: sai de telas públicas (login/onboarding) para as abas.
+      if (inAuthGroup || inOnboarding) router.replace('/(tabs)');
+      return;
     }
-  }, [session, isLoading, segments]);
+
+    // Sem sessão: primeiro acesso vê o onboarding; depois disso, vai para o login.
+    if (inAuthGroup || inOnboarding) return; // já está numa tela pública
+    router.replace(onboardingSeen ? '/(auth)/login' : '/onboarding');
+  }, [session, isLoading, segments, onboardingSeen, onboardingHydrated]);
 
   if (isLoading) {
     return <LoadingScreen />;
@@ -193,6 +202,7 @@ export default function RootLayout() {
     // (no nativo a leitura é assíncrona).
     useProjectStore.getState().hydrate();
     useThemeStore.getState().hydrate();
+    useOnboardingStore.getState().hydrate();
 
     initializeAuth().then(() => {
       initDoneRef.current = true;

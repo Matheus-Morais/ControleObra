@@ -1,8 +1,13 @@
 import React from 'react';
 import { Text, ActivityIndicator, View, Pressable } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { cssInterop } from 'nativewind';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+// Componentes criados via createAnimatedComponent não são auto-registrados pelo
+// NativeWind, então o `className` (ex.: bg-terracotta-500) seria descartado.
+// Registrar o cssInterop mapeia className -> style e restaura o fundo/estilos.
+cssInterop(AnimatedPressable, { className: 'style' });
 
 interface ButtonProps {
   title: string;

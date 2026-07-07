@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useProjectStore } from '../../stores/projectStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -28,6 +29,7 @@ function StatusSummaryCard({ icon, label, count, color }: { icon: string; label:
 
 export default function DashboardScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const activeProject = useProjectStore((s) => s.activeProject);
   const profile = useAuthStore((s) => s.profile);
   const { data: rooms } = useRooms(activeProject?.id);
@@ -48,6 +50,10 @@ export default function DashboardScreen() {
   }, [items]);
 
   const overallProgress = formatPercentage(stats.purchased + stats.installed, stats.total);
+  const doneCount = stats.purchased + stats.installed;
+  const totalBudget = Number(activeProject?.total_budget) || stats.totalBudget;
+  const remaining = Math.max(0, totalBudget - totalSpent);
+  const overBudget = totalBudget > 0 && totalSpent > totalBudget;
 
   const recentItems = useMemo(() => {
     if (!items) return [];
@@ -92,7 +98,7 @@ export default function DashboardScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-cream dark:bg-sand-900" contentContainerStyle={{ paddingBottom: 30 }}>
+    <ScrollView className="flex-1 bg-cream dark:bg-sand-900" contentContainerStyle={{ paddingBottom: 30, paddingTop: insets.top }}>
       <View className="px-4 pt-6 pb-2">
         <Text className="text-sand-500 dark:text-sand-400 text-base">
           Olá, {profile?.full_name?.split(' ')[0] ?? 'Usuário'}
@@ -119,10 +125,18 @@ export default function DashboardScreen() {
             </View>
           </View>
           <ProgressBar
-            progress={formatPercentage(totalSpent, Number(activeProject.total_budget) || stats.totalBudget || 1)}
-            color="bg-terracotta-500"
+            progress={formatPercentage(totalSpent, totalBudget || 1)}
+            color={overBudget ? 'bg-red-500' : 'bg-terracotta-500'}
             className="mt-2"
           />
+          <View className="flex-row justify-between mt-2">
+            <Text className="text-sand-500 dark:text-sand-400 text-xs">
+              Restante: {formatCurrency(remaining)}
+            </Text>
+            <Text className={`text-xs font-medium ${overBudget ? 'text-red-500' : 'text-moss-500'}`}>
+              {overBudget ? 'Acima do orçamento' : 'Dentro do orçamento'}
+            </Text>
+          </View>
         </Card>
       </View>
 
@@ -135,7 +149,11 @@ export default function DashboardScreen() {
           </View>
           <ProgressBar progress={overallProgress} color="bg-moss-500" showLabel={false} />
           <Text className="text-sand-500 dark:text-sand-400 text-xs mt-2">
-            {stats.purchased + stats.installed} de {stats.total} itens concluídos
+            {stats.total === 0
+              ? 'Adicione itens para acompanhar o progresso'
+              : doneCount === 0
+                ? `${stats.total} itens catalogados — comece marcando os que já decidiu`
+                : `${doneCount} de ${stats.total} itens concluídos`}
           </Text>
         </Card>
       </View>
